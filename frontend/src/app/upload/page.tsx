@@ -87,8 +87,11 @@ export default function UploadPage() {
     setIsAnalyzing(true);
     setCurrentStep(0);
 
+    const startTime = Date.now();
     try {
       const result = await analyzeContract(files[0], files[1], files[2]);
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      sessionStorage.setItem("safehome_elapsed", elapsed);
       sessionStorage.setItem("safehome_result", JSON.stringify(result));
       router.push("/result");
     } catch (err) {

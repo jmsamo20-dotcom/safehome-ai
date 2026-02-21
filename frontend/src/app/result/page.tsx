@@ -398,6 +398,8 @@ export default function ResultPage() {
   const [canShare, setCanShare] = useState(false);
   const [expandedBasis, setExpandedBasis] = useState<string | null>(null);
   const [showAllRisks, setShowAllRisks] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState<string | null>(null);
+  const [ssriTooltip, setSsriTooltip] = useState<string | null>(null);
 
   useEffect(() => {
     setCanShare(typeof navigator !== "undefined" && !!navigator.share);
@@ -406,6 +408,12 @@ export default function ResultPage() {
   useEffect(() => {
     const storedResult = sessionStorage.getItem("safehome_result");
     const storedError = sessionStorage.getItem("safehome_error");
+    const storedElapsed = sessionStorage.getItem("safehome_elapsed");
+
+    if (storedElapsed) {
+      setElapsedTime(storedElapsed);
+      sessionStorage.removeItem("safehome_elapsed");
+    }
 
     if (storedResult) {
       setResult(JSON.parse(storedResult));
@@ -502,6 +510,43 @@ export default function ResultPage() {
             {result.grade}등급
           </div>
         </div>
+      </div>
+
+      {/* ── AI 판정 배너 ── */}
+      <div className={`rounded-xl p-3 mb-3 flex items-center justify-between ${
+        result.grade === "A" || result.grade === "B"
+          ? "bg-green-600"
+          : result.grade === "C"
+          ? "bg-yellow-600"
+          : result.grade === "D"
+          ? "bg-orange-600"
+          : "bg-red-600"
+      }`}>
+        <div className="flex items-center gap-2">
+          <span className="text-white text-lg">
+            {result.grade === "A" || result.grade === "B" ? "\u2705" : result.grade === "C" || result.grade === "D" ? "\u26A0\uFE0F" : "\uD83D\uDEA8"}
+          </span>
+          <div>
+            <p className="text-white text-sm font-bold">
+              AI 계약 판정: {
+                result.grade === "A" || result.grade === "B"
+                  ? "계약 진행 가능"
+                  : result.grade === "C"
+                  ? "추가 확인 필요"
+                  : result.grade === "D"
+                  ? "계약 전 수정 필요"
+                  : result.grade === "E"
+                  ? "계약 비추천"
+                  : "즉시 계약 중단"
+              }
+            </p>
+          </div>
+        </div>
+        {elapsedTime && (
+          <span className="text-white/80 text-xs font-mono bg-white/20 px-2 py-1 rounded-lg">
+            {elapsedTime}s
+          </span>
+        )}
       </div>
 
       {/* ── [1] HERO: 등급 + 점수 + 요약 ── */}
@@ -673,16 +718,27 @@ export default function ResultPage() {
                     <span className="text-xs text-gray-400">{risk.risk_id}</span>
                   </div>
                   {risk.standard_risk_code && SSRI_LABELS[risk.standard_risk_code] && (
-                    <div className="mt-1.5 flex items-center gap-1.5">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 border border-indigo-200 rounded-full text-xs text-indigo-600 font-medium">
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        {risk.standard_risk_code}
-                      </span>
-                      <span className="text-xs text-indigo-400">
-                        {SSRI_LABELS[risk.standard_risk_code]}
-                      </span>
+                    <div className="mt-1.5 relative">
+                      <button
+                        onClick={() => setSsriTooltip(ssriTooltip === risk.risk_id ? null : risk.risk_id)}
+                        className="flex items-center gap-1.5 group"
+                      >
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 border border-indigo-200 rounded-full text-xs text-indigo-600 font-medium group-hover:bg-indigo-100 transition">
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          {risk.standard_risk_code}
+                        </span>
+                        <span className="text-xs text-indigo-400">
+                          {SSRI_LABELS[risk.standard_risk_code]}
+                        </span>
+                      </button>
+                      {ssriTooltip === risk.risk_id && (
+                        <div className="mt-1.5 p-2.5 bg-indigo-900 text-white rounded-lg text-xs leading-relaxed animate-in">
+                          <p className="font-semibold mb-1">{risk.standard_risk_code}: {SSRI_LABELS[risk.standard_risk_code]}</p>
+                          <p className="text-indigo-200">SSRI(Standard SafeHome Risk Index)는 국가별 위험 코드를 글로벌 표준으로 매핑합니다. 이 코드는 한국({risk.risk_id})뿐 아니라 일본, 미국 등 다른 국가에서도 동일하게 적용됩니다.</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
