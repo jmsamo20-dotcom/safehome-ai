@@ -1,6 +1,62 @@
 import type { AnalysisResult } from "./types";
 
 /**
+ * 샘플 0: A등급 - 안전한 계약서
+ * 심사 비교용: "안전한 계약은 이렇게 보입니다"
+ */
+export const SAMPLE_SAFE: AnalysisResult = {
+  grade: "A",
+  score: 95,
+  detected_risks: [],
+  extracted: {
+    landlord: {
+      name: "최OO",
+      id_hint: "780510-1******",
+      address: "서울특별시 서초구 반포동 12-3",
+    },
+    tenant: {
+      name: "한OO",
+      id_hint: "970223-2******",
+      address: "서울특별시 강남구 대치동 45-6",
+    },
+    property: {
+      address: "서울특별시 서초구 반포동 12-3 OO아파트",
+      unit: "제102동 제805호",
+    },
+    money: {
+      deposit: "4억원 (전세)",
+      rent: "없음",
+      maintenance_fee: "월 30만원",
+      payment_day: "매월 25일",
+    },
+    term: {
+      start_date: "2026-04-01",
+      end_date: "2028-03-31",
+    },
+    registry: {
+      owner: "최OO (2019.03.15 소유권이전 - 매매)",
+      rights_summary: "을구 사항 없음 (근저당·가압류·신탁 없음)",
+    },
+  },
+  simulation: {
+    deposit_amount: "4억원",
+    recovery_rate: 98,
+    risk_factors: [],
+    safe_factors: [
+      "선순위 채권 없음 (근저당·가압류 0원)",
+      "소유자 7년 이상 보유 (안정적)",
+      "전세보증보험 가입 가능",
+      "임대차 기간 2년 충족",
+    ],
+  },
+  document_type: "혼합",
+  summary:
+    "전반적으로 안전한 계약입니다. 등기부에 근저당이나 가압류가 없고, 계약 조건도 법적 기준을 충족합니다.",
+  disclaimer:
+    "본 분석은 AI 기반 참고 정보이며, 법률 자문이 아닙니다. 정확한 판단을 위해 법률 전문가 상담을 권장합니다. (이 결과는 샘플 데이터입니다)",
+};
+
+/**
  * 샘플 1: D등급 - 주의 필요한 계약서
  * 가압류 + 즉시명도 + 2년 미만 + 보증보험 거부
  */
@@ -87,6 +143,18 @@ export const SAMPLE_CAUTION: AnalysisResult = {
         "을구 제1호 근저당 OO은행 채권최고액 1억 8,000만원 / 을구 제3호 가압류 OO캐피탈 채권금액 5,000만원",
     },
   },
+  simulation: {
+    deposit_amount: "2억 5,000만원",
+    recovery_rate: 32,
+    risk_factors: [
+      "근저당 1억 8,000만원 (은행이 먼저 가져감)",
+      "가압류 5,000만원 (추가 채권 존재)",
+      "전세보증보험 가입 불가 (임대인 거부)",
+    ],
+    safe_factors: [
+      "전입신고 + 확정일자 확보 시 대항력 가능",
+    ],
+  },
   document_type: "혼합",
   summary:
     "매우 위험한 계약입니다. 가압류가 설정되어 있고, 즉시 명도 동의 강요 조항이 포함되어 있습니다. 이 계약은 재고하시기 바랍니다.",
@@ -97,10 +165,6 @@ export const SAMPLE_CAUTION: AnalysisResult = {
 /**
  * 샘플 2: F등급 - 갭투자 전세사기 패턴
  * 실제 2023~2024 전세사기 사건에서 빈번하게 나타난 유형
- * - 매매 당일 전세 계약 (갭투자)
- * - 과다 근저당 (깡통전세)
- * - 신탁등기
- * - 우선변제권 포기
  */
 export const SAMPLE_FRAUD: AnalysisResult = {
   grade: "F",
@@ -198,6 +262,17 @@ export const SAMPLE_FRAUD: AnalysisResult = {
         "을구 제1호 근저당 OO은행 채권최고액 3억 6,000만원 (2026.02.15 설정 - 계약 당일)",
     },
   },
+  simulation: {
+    deposit_amount: "2억 8,000만원",
+    recovery_rate: 0,
+    risk_factors: [
+      "근저당 3억 6,000만원 (보증금보다 많음 = 깡통전세)",
+      "매매 당일 전세계약 (갭투자 패턴)",
+      "전세보증보험 가입 불가 (임대인 거부)",
+      "우선변제권 포기 조항 (법적 무효이나 사기 징후)",
+    ],
+    safe_factors: [],
+  },
   document_type: "혼합",
   summary:
     "매우 위험한 계약입니다. 이 계약은 전형적인 갭투자 전세사기 패턴을 보이고 있습니다. 소유권 이전 당일 전세 계약, 과다 근저당(깡통전세), 우선변제권 포기 강요, 강제집행 동의 조항이 모두 포함되어 있습니다. 즉시 계약을 중단하세요.",
@@ -205,5 +280,5 @@ export const SAMPLE_FRAUD: AnalysisResult = {
     "본 분석은 AI 기반 참고 정보이며, 법률 자문이 아닙니다. 정확한 판단을 위해 법률 전문가 상담을 권장합니다. (이 결과는 실제 전세사기 패턴을 기반으로 한 샘플 데이터입니다)",
 };
 
-/** 하위 호환용 - 기존 SAMPLE_RESULT는 SAMPLE_CAUTION을 참조 */
+/** 하위 호환용 */
 export const SAMPLE_RESULT = SAMPLE_CAUTION;

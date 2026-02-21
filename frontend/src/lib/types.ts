@@ -22,6 +22,13 @@ export interface ExtractedInfo {
   registry?: { owner?: string; rights_summary?: string };
 }
 
+export interface DepositSimulation {
+  deposit_amount: string;
+  recovery_rate: number;
+  risk_factors: string[];
+  safe_factors: string[];
+}
+
 export interface AnalysisResult {
   grade: "A" | "B" | "C" | "D" | "E" | "F";
   score: number;
@@ -30,4 +37,5 @@ export interface AnalysisResult {
   disclaimer: string;
   extracted?: ExtractedInfo;
   document_type?: string;
+  simulation?: DepositSimulation;
 }

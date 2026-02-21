@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import type { AnalysisResult, ExtractedInfo } from "@/lib/types";
+import type { AnalysisResult, ExtractedInfo, DepositSimulation } from "@/lib/types";
 
 const GRADE_COLORS: Record<
   string,
@@ -14,6 +14,15 @@ const GRADE_COLORS: Record<
   D: { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-200", label: "주의" },
   E: { bg: "bg-red-50", text: "text-red-600", border: "border-red-200", label: "위험" },
   F: { bg: "bg-red-100", text: "text-red-700", border: "border-red-300", label: "매우 위험" },
+};
+
+const GRADE_MESSAGES: Record<string, string> = {
+  A: "현재 위험 신호는 낮습니다.",
+  B: "대체로 안전하지만, 아래 참고 사항을 확인하세요.",
+  C: "몇 가지 확인이 필요합니다.",
+  D: "주의가 필요합니다. 계약 전 반드시 확인하세요.",
+  E: "심각한 위험 신호가 감지되었습니다.",
+  F: "전세사기 위험 신호가 다수 감지되었습니다.",
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -29,6 +38,92 @@ function InfoValue({ value }: { value?: string }) {
     <span className={isUnknown ? "text-gray-400" : "text-gray-900 font-medium"}>
       {isUnknown ? "확인 불가" : value}
     </span>
+  );
+}
+
+function DepositSimulationCard({ sim }: { sim: DepositSimulation }) {
+  const rate = sim.recovery_rate;
+  const color =
+    rate >= 80 ? "text-green-600" : rate >= 40 ? "text-yellow-600" : "text-red-600";
+  const barColor =
+    rate >= 80 ? "bg-green-500" : rate >= 40 ? "bg-yellow-500" : "bg-red-500";
+  const bgColor =
+    rate >= 80 ? "bg-green-50" : rate >= 40 ? "bg-yellow-50" : "bg-red-50";
+  const borderColor =
+    rate >= 80
+      ? "border-green-200"
+      : rate >= 40
+      ? "border-yellow-200"
+      : "border-red-200";
+
+  return (
+    <div
+      className={`${bgColor} rounded-2xl border ${borderColor} p-5 mb-4 print-keep print-border`}
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <svg
+          className="w-5 h-5 text-gray-600"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        <h3 className="font-bold text-gray-900">보증금 안전도 시뮬레이션</h3>
+      </div>
+
+      <div className="text-center mb-4">
+        <p className="text-xs text-gray-500 mb-1">
+          보증금 {sim.deposit_amount}
+        </p>
+        <div className={`text-4xl font-black ${color}`}>{rate}%</div>
+        <p className="text-sm text-gray-600 mt-1">회수 가능성</p>
+      </div>
+
+      <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
+        <div
+          className={`h-3 rounded-full transition-all ${barColor}`}
+          style={{ width: `${Math.max(3, rate)}%` }}
+        />
+      </div>
+
+      {sim.risk_factors.length > 0 && (
+        <div className="mb-3">
+          <p className="text-xs font-semibold text-red-700 mb-1.5">
+            위험 요인
+          </p>
+          <ul className="space-y-1">
+            {sim.risk_factors.map((f, i) => (
+              <li key={i} className="text-xs text-red-800 flex items-start gap-1.5">
+                <span className="shrink-0 mt-0.5">&#9888;</span>
+                <span>{f}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {sim.safe_factors.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-green-700 mb-1.5">
+            안전 요인
+          </p>
+          <ul className="space-y-1">
+            {sim.safe_factors.map((f, i) => (
+              <li key={i} className="text-xs text-green-800 flex items-start gap-1.5">
+                <span className="shrink-0 mt-0.5">&#10003;</span>
+                <span>{f}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -243,6 +338,9 @@ export default function ResultPage() {
         <p className={`text-lg font-semibold ${gradeStyle.text}`}>
           {gradeStyle.label}
         </p>
+        <p className="text-sm text-gray-600 mt-2">
+          {GRADE_MESSAGES[result.grade]}
+        </p>
         <div className="mt-3">
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
@@ -268,6 +366,11 @@ export default function ResultPage() {
           {result.summary}
         </p>
       </div>
+
+      {/* ── 보증금 회수 시뮬레이션 ── */}
+      {result.simulation && (
+        <DepositSimulationCard sim={result.simulation} />
+      )}
 
       {/* 카테고리별 위험도 바 */}
       {result.detected_risks.length > 0 && (
@@ -321,6 +424,31 @@ export default function ResultPage() {
       {/* ── [2] 위험 요소 리스트 ── */}
       {result.detected_risks.length > 0 && (
         <div id="risk-list">
+          {/* 핵심 위험 TOP 3 */}
+          {result.detected_risks.length > 1 && (
+            <div className="bg-gray-900 rounded-xl p-4 mb-4 print-keep">
+              <h3 className="text-xs font-semibold text-gray-400 mb-2">
+                핵심 위험 요약
+              </h3>
+              <ul className="space-y-1.5">
+                {[...result.detected_risks]
+                  .sort((a, b) => b.severity - a.severity)
+                  .slice(0, 3)
+                  .map((risk, i) => (
+                    <li key={risk.risk_id} className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center shrink-0">
+                        {i + 1}
+                      </span>
+                      <span className="text-sm text-white">{risk.risk_name}</span>
+                      <span className="text-xs text-gray-400 ml-auto">
+                        심각도 {risk.severity}/10
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          )}
+
           <h3 className="font-semibold text-gray-900 mb-3">
             탐지된 위험 요소 ({result.detected_risks.length}건)
           </h3>

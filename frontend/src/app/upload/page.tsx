@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { analyzeContract } from "@/lib/api";
-import { SAMPLE_CAUTION, SAMPLE_FRAUD } from "@/lib/sample-data";
+import { SAMPLE_SAFE, SAMPLE_CAUTION, SAMPLE_FRAUD } from "@/lib/sample-data";
 
 const ANALYZE_STEPS = [
   "문서 읽는 중...",
@@ -80,9 +80,9 @@ export default function UploadPage() {
     if (file) handleFile(file);
   };
 
-  const handleSampleDemo = (type: "caution" | "fraud") => {
-    const sample = type === "caution" ? SAMPLE_CAUTION : SAMPLE_FRAUD;
-    sessionStorage.setItem("safehome_result", JSON.stringify(sample));
+  const handleSampleDemo = (type: "safe" | "caution" | "fraud") => {
+    const samples = { safe: SAMPLE_SAFE, caution: SAMPLE_CAUTION, fraud: SAMPLE_FRAUD };
+    sessionStorage.setItem("safehome_result", JSON.stringify(samples[type]));
     router.push("/result");
   };
 
@@ -187,22 +187,27 @@ export default function UploadPage() {
           <span className="mx-3 text-gray-400 text-xs">또는 샘플로 체험하기</span>
           <div className="flex-grow border-t border-gray-200" />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            onClick={() => handleSampleDemo("safe")}
+            className="py-3 px-2 bg-green-50 border border-green-200 rounded-xl hover:bg-green-100 transition text-center"
+          >
+            <span className="block text-xl font-black text-green-700 mb-0.5">A</span>
+            <span className="block text-xs font-medium text-green-800">안전</span>
+          </button>
           <button
             onClick={() => handleSampleDemo("caution")}
-            className="py-4 px-3 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition text-center"
+            className="py-3 px-2 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition text-center"
           >
-            <span className="block text-2xl mb-1">D</span>
-            <span className="block text-sm font-medium text-amber-800">주의 필요</span>
-            <span className="block text-xs text-amber-600 mt-1">가압류 + 독소조항</span>
+            <span className="block text-xl font-black text-amber-700 mb-0.5">D</span>
+            <span className="block text-xs font-medium text-amber-800">주의 필요</span>
           </button>
           <button
             onClick={() => handleSampleDemo("fraud")}
-            className="py-4 px-3 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition text-center"
+            className="py-3 px-2 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition text-center"
           >
-            <span className="block text-2xl mb-1">F</span>
-            <span className="block text-sm font-medium text-red-800">전세사기 패턴</span>
-            <span className="block text-xs text-red-600 mt-1">갭투자 + 깡통전세</span>
+            <span className="block text-xl font-black text-red-700 mb-0.5">F</span>
+            <span className="block text-xs font-medium text-red-800">전세사기</span>
           </button>
         </div>
         <p className="text-center text-gray-400 text-xs mt-3">
