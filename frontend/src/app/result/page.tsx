@@ -25,6 +25,39 @@ const GRADE_MESSAGES: Record<string, string> = {
   F: "전세사기 위험 신호가 다수 감지되었습니다.",
 };
 
+const GRADE_ACTIONS: Record<string, { icon: string; text: string; color: string }> = {
+  A: { icon: "\u2705", text: "계약 진행 가능합니다.", color: "text-green-700" },
+  B: { icon: "\u2705", text: "아래 참고 사항 확인 후 진행 권장합니다.", color: "text-green-600" },
+  C: { icon: "\u26A0\uFE0F", text: "추가 확인 후 진행 권장합니다.", color: "text-yellow-700" },
+  D: { icon: "\u26A0\uFE0F", text: "계약 전 특약 수정이 필요합니다.", color: "text-orange-700" },
+  E: { icon: "\uD83D\uDED1", text: "법률 전문가 상담 후 결정하세요.", color: "text-red-600" },
+  F: { icon: "\uD83D\uDEA8", text: "계약을 즉시 중단하세요.", color: "text-red-700" },
+};
+
+const RISK_LEGAL_BASIS: Record<string, string> = {
+  "A-1": "민법 제563조",
+  "A-2": "민법 관습법",
+  "A-3": "주택임대차보호법 제4조",
+  "A-4": "공동주택관리법 제31조",
+  "B-1": "주택임대차보호법 제10조",
+  "B-2": "주택임대차보호법 제10조 (강행규정)",
+  "B-3": "국세기본법 제35조",
+  "B-4": "민법 제623조",
+  "B-5": "민간임대주택특별법 제49조",
+  "B-6": "민사집행법 제56조",
+  "C-1": "민사집행법",
+  "C-2": "신탁법 제2조",
+  "C-3": "주택임대차보호법 제3조의3",
+  "C-4": "주택임대차보호법 (배당순위)",
+  "C-5": "민법 제303조",
+  "C-6": "민법 제186조",
+  "D-1": "부동산거래신고법",
+  "D-2": "건축법 제79조",
+  "D-3": "민법 제114조",
+  "D-4": "민법 제629조",
+  "D-5": "국세기본법 제35조",
+};
+
 const CATEGORY_LABELS: Record<string, string> = {
   contract: "계약 조항",
   special: "특약 사항",
@@ -223,6 +256,8 @@ export default function ResultPage() {
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [canShare, setCanShare] = useState(false);
+  const [expandedBasis, setExpandedBasis] = useState<string | null>(null);
+  const [showAllRisks, setShowAllRisks] = useState(false);
 
   useEffect(() => {
     setCanShare(typeof navigator !== "undefined" && !!navigator.share);
@@ -341,6 +376,11 @@ export default function ResultPage() {
         <p className="text-sm text-gray-600 mt-2">
           {GRADE_MESSAGES[result.grade]}
         </p>
+        {/* AI 권장 행동 */}
+        <div className={`mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/60 ${GRADE_ACTIONS[result.grade]?.color || "text-gray-700"}`}>
+          <span className="text-sm">{GRADE_ACTIONS[result.grade]?.icon}</span>
+          <span className="text-xs font-bold">{GRADE_ACTIONS[result.grade]?.text}</span>
+        </div>
         <div className="mt-3">
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
@@ -452,8 +492,10 @@ export default function ResultPage() {
           <h3 className="font-semibold text-gray-900 mb-3">
             탐지된 위험 요소 ({result.detected_risks.length}건)
           </h3>
-          <div className="space-y-4 mb-6">
-            {result.detected_risks.map((risk) => (
+          <div className="space-y-4 mb-2">
+            {result.detected_risks
+              .slice(0, showAllRisks ? undefined : 3)
+              .map((risk) => (
               <div
                 key={risk.risk_id}
                 className="bg-white rounded-xl border border-gray-200 overflow-hidden print-keep print-border"
@@ -479,6 +521,7 @@ export default function ResultPage() {
                       {risk.risk_name}
                     </span>
                   </div>
+                  <span className="text-xs text-gray-400">{risk.risk_id}</span>
                 </div>
 
                 <div className="px-4 py-3 bg-red-50/50">
@@ -492,6 +535,73 @@ export default function ResultPage() {
                   <p className="text-sm text-gray-700 leading-relaxed">
                     {risk.explanation}
                   </p>
+                </div>
+
+                {/* AI 분석 근거 보기 */}
+                <div className="px-4 border-t border-gray-100">
+                  <button
+                    onClick={() =>
+                      setExpandedBasis(
+                        expandedBasis === risk.risk_id ? null : risk.risk_id
+                      )
+                    }
+                    className="no-print w-full py-2 flex items-center justify-between text-xs text-gray-500 hover:text-gray-700 transition"
+                  >
+                    <span>AI 분석 근거 보기</span>
+                    <svg
+                      className={`w-3.5 h-3.5 transition-transform ${
+                        expandedBasis === risk.risk_id ? "rotate-180" : ""
+                      }`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+                  {expandedBasis === risk.risk_id && (
+                    <div className="pb-3 space-y-1.5 text-xs">
+                      <div className="flex gap-2">
+                        <span className="text-gray-400 shrink-0 w-16">탐지 방식</span>
+                        <span className="text-gray-700 font-medium">
+                          {risk.risk_id.startsWith("A") || risk.risk_id.startsWith("B")
+                            ? "키워드 매칭 + LLM 문맥 분석"
+                            : risk.risk_id.startsWith("C")
+                            ? "등기부 키워드 매칭"
+                            : "상황 키워드 매칭"}
+                        </span>
+                      </div>
+                      {RISK_LEGAL_BASIS[risk.risk_id] && (
+                        <div className="flex gap-2">
+                          <span className="text-gray-400 shrink-0 w-16">법적 근거</span>
+                          <span className="text-gray-700 font-medium">
+                            {RISK_LEGAL_BASIS[risk.risk_id]}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <span className="text-gray-400 shrink-0 w-16">심각도</span>
+                        <span className="text-gray-700 font-medium">
+                          {risk.severity}/10
+                          {risk.severity >= 9 && " (치명적)"}
+                          {risk.severity >= 7 && risk.severity < 9 && " (높음)"}
+                          {risk.severity >= 5 && risk.severity < 7 && " (중간)"}
+                          {risk.severity < 5 && " (낮음)"}
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <span className="text-gray-400 shrink-0 w-16">항목 ID</span>
+                        <span className="text-gray-700 font-medium">
+                          {risk.risk_id} ({CATEGORY_LABELS[risk.category] || risk.category})
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="px-4 py-3 bg-blue-50 border-t border-blue-100">
@@ -517,6 +627,18 @@ export default function ResultPage() {
               </div>
             ))}
           </div>
+
+          {/* 더 보기 / 접기 버튼 */}
+          {result.detected_risks.length > 3 && (
+            <button
+              onClick={() => setShowAllRisks(!showAllRisks)}
+              className="no-print w-full py-2.5 text-sm text-gray-500 hover:text-gray-700 transition mb-4"
+            >
+              {showAllRisks
+                ? "접기"
+                : `나머지 ${result.detected_risks.length - 3}건 더 보기`}
+            </button>
+          )}
         </div>
       )}
 
