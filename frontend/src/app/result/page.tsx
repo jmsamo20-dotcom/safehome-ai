@@ -127,6 +127,11 @@ export default function ResultPage() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [canShare, setCanShare] = useState(false);
+
+  useEffect(() => {
+    setCanShare(typeof navigator !== "undefined" && !!navigator.share);
+  }, []);
 
   useEffect(() => {
     const storedResult = sessionStorage.getItem("safehome_result");
@@ -148,6 +153,25 @@ export default function ResultPage() {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleShare = async () => {
+    if (!result) return;
+    const riskSummary = result.detected_risks
+      .map((r) => `- [${r.risk_name}] ${r.explanation.slice(0, 50)}...`)
+      .join("\n");
+    try {
+      await navigator.share({
+        title: `세이프홈 AI 분석 결과: ${result.grade}등급`,
+        text: `전월세 계약 위험도: ${result.grade}등급 (${result.score}/100)\n\n${result.summary}\n\n위험 요소 ${result.detected_risks.length}건:\n${riskSummary}\n\n세이프홈 AI로 분석하세요`,
+      });
+    } catch {
+      // 사용자가 공유 취소한 경우
+    }
   };
 
   // 에러 상태
@@ -194,6 +218,22 @@ export default function ResultPage() {
 
   return (
     <div className="pb-8">
+      {/* 인쇄 전용 헤더 (화면에서는 숨김) */}
+      <div className="hidden print-header mb-4">
+        <div className="flex items-center justify-between border-b border-gray-300 pb-3">
+          <div>
+            <h1 className="text-lg font-bold">세이프홈 AI - 계약 리스크 분석 보고서</h1>
+            <p className="text-xs text-gray-500">
+              분석일: {new Date().toLocaleDateString("ko-KR")}
+              {result.document_type && ` | 문서 유형: ${result.document_type}`}
+            </p>
+          </div>
+          <div className={`text-3xl font-black ${gradeStyle.text}`}>
+            {result.grade}등급
+          </div>
+        </div>
+      </div>
+
       {/* ── [1] HERO: 등급 + 점수 + 요약 ── */}
       <div className={`${gradeStyle.bg} rounded-2xl p-6 text-center mb-4`}>
         <p className="text-sm text-gray-500 mb-1">위험도 등급</p>
@@ -272,7 +312,7 @@ export default function ResultPage() {
               .getElementById("risk-list")
               ?.scrollIntoView({ behavior: "smooth" })
           }
-          className={`w-full py-3 rounded-xl font-semibold transition mb-6 border ${gradeStyle.border} ${gradeStyle.bg} ${gradeStyle.text}`}
+          className={`no-print w-full py-3 rounded-xl font-semibold transition mb-6 border ${gradeStyle.border} ${gradeStyle.bg} ${gradeStyle.text}`}
         >
           위험 요소 {result.detected_risks.length}건 확인하기
         </button>
@@ -288,7 +328,7 @@ export default function ResultPage() {
             {result.detected_risks.map((risk) => (
               <div
                 key={risk.risk_id}
-                className="bg-white rounded-xl border border-gray-200 overflow-hidden"
+                className="bg-white rounded-xl border border-gray-200 overflow-hidden print-keep print-border"
               >
                 <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -340,7 +380,7 @@ export default function ResultPage() {
                       onClick={() =>
                         handleCopy(risk.suggestion, risk.risk_id)
                       }
-                      className="shrink-0 px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition"
+                      className="no-print shrink-0 px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition"
                     >
                       {copiedId === risk.risk_id ? "복사됨!" : "복사"}
                     </button>
@@ -356,7 +396,7 @@ export default function ResultPage() {
       {result.extracted && <ExtractedInfoSection extracted={result.extracted} />}
 
       {/* ── [4] 행동 유도 (Next Action) ── */}
-      <div className="bg-blue-50 rounded-xl border border-blue-100 p-4 mb-4">
+      <div className="no-print bg-blue-50 rounded-xl border border-blue-100 p-4 mb-4">
         <h3 className="text-sm font-semibold text-blue-800 mb-3">
           다음에 할 일
         </h3>
@@ -406,18 +446,42 @@ export default function ResultPage() {
               </p>
             </div>
           </div>
+
+          {/* PDF 저장 + 공유 버튼 */}
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <button
+              onClick={handlePrint}
+              className="flex items-center justify-center gap-2 bg-white rounded-lg p-3 border border-blue-100 hover:bg-blue-50 transition"
+            >
+              <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span className="text-sm font-semibold text-gray-900">PDF 저장</span>
+            </button>
+            {canShare && (
+              <button
+                onClick={handleShare}
+                className="flex items-center justify-center gap-2 bg-white rounded-lg p-3 border border-blue-100 hover:bg-blue-50 transition"
+              >
+                <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+                <span className="text-sm font-semibold text-gray-900">공유하기</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* ── [5] CTA + 면책 ── */}
       <button
         onClick={() => router.push("/upload")}
-        className="w-full py-3 bg-gray-900 text-white rounded-xl font-semibold hover:bg-gray-800 transition mb-4"
+        className="no-print w-full py-3 bg-gray-900 text-white rounded-xl font-semibold hover:bg-gray-800 transition mb-4"
       >
         다른 계약서 분석하기
       </button>
 
-      <div className="bg-gray-100 rounded-lg p-4">
+      <div className="bg-gray-100 rounded-lg p-4 print-border">
         <p className="text-xs text-gray-500 leading-relaxed">
           {result.disclaimer}
         </p>
