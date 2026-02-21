@@ -44,6 +44,7 @@ class DetectedRisk(BaseModel):
     matched_text: str  # 계약서에서 매칭된 원문
     explanation: str  # 쉬운 말 설명
     suggestion: str  # 수정 특약 제안
+    standard_risk_code: str | None = None  # SSRI 표준 코드 (예: SSRI-001)
 
 
 class CrossCheckStatus(str, Enum):

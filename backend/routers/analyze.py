@@ -7,10 +7,8 @@ from fastapi import APIRouter, File, UploadFile, HTTPException, Form
 
 from config import ALLOWED_EXTENSIONS, MAX_UPLOAD_SIZE_BYTES
 from models.schemas import AnalysisResult
-from services.ocr_service import extract_text
-from services.rule_engine import detect_by_keywords, detect_contract_period, build_analysis_result
-from services.llm_analyzer import analyze_with_llm
-from services.cross_validator import cross_validate
+from core.registry import get_default
+from core.pipeline import run_analysis_pipeline
 from utils.file_manager import create_job_dir
 
 router = APIRouter()
@@ -76,10 +74,13 @@ async def analyze_contract(
 
         logger.info("[%s] Step 1: 파일 저장 - %s (%.1fs)", job_id, docs_analyzed, time.time() - t0)
 
-        # Step 2: OCR 텍스트 추출 (문서별 분리)
-        contract_text = await asyncio.to_thread(extract_text, contract_path, job_dir)
-        registry_text = await asyncio.to_thread(extract_text, registry_path, job_dir) if registry_path else None
-        building_text = await asyncio.to_thread(extract_text, building_path, job_dir) if building_path else None
+        # Step 2: OCR 텍스트 추출 (플러그인의 OCR 서비스 사용)
+        plugin = get_default()
+        ocr_service = plugin.get_ocr_service()
+
+        contract_text = await asyncio.to_thread(ocr_service.extract_text, contract_path, job_dir)
+        registry_text = await asyncio.to_thread(ocr_service.extract_text, registry_path, job_dir) if registry_path else None
+        building_text = await asyncio.to_thread(ocr_service.extract_text, building_path, job_dir) if building_path else None
 
         logger.info(
             "[%s] Step 2: OCR 완료 - 계약서 %d자 / 등기부 %s자 / 건축물대장 %s자 (%.1fs)",
@@ -97,50 +98,19 @@ async def analyze_contract(
                 "더 선명한 사진을 업로드해 주세요."
             )
 
-        # Step 3: Rule 기반 탐지 — 모든 텍스트에서 키워드 탐색
-        combined_text = contract_text
-        if registry_text:
-            combined_text += "\n\n[등기부등본]\n" + registry_text
-        if building_text:
-            combined_text += "\n\n[건축물대장]\n" + building_text
-
-        rule_detected = detect_by_keywords(combined_text)
-        period_risk = detect_contract_period(contract_text)
-        if period_risk:
-            rule_detected.append(period_risk)
-        logger.info("[%s] Step 3: Rule 탐지 - %d건 (%.1fs)", job_id, len(rule_detected), time.time() - t0)
-
-        # Step 4: LLM 분석 — 문서 컨텍스트 분리 전달
-        llm_input = f"[계약서]\n{contract_text}"
-        if registry_text:
-            llm_input += f"\n\n[등기부등본]\n{registry_text}"
-        if building_text:
-            llm_input += f"\n\n[건축물대장]\n{building_text}"
-
-        llm_result = await asyncio.to_thread(analyze_with_llm, llm_input)
-        logger.info("[%s] Step 4: LLM 분석 - %d건 (%.1fs)", job_id, len(llm_result.risks), time.time() - t0)
-
-        # Step 5: 교차 검증
-        cross_checks = cross_validate(
-            contract_text, registry_text, building_text,
-            extracted=llm_result.extracted,
-        )
-        logger.info("[%s] Step 5: 교차 검증 - %d건 (%.1fs)", job_id, len(cross_checks), time.time() - t0)
-
-        # Step 6: 최종 결과 생성
-        result = build_analysis_result(
-            rule_detected,
-            llm_result.risks,
-            extracted=llm_result.extracted,
-            document_type=llm_result.document_type,
-            cross_checks=cross_checks,
+        # Step 3~6: 분석 파이프라인 (플러그인 기반)
+        result = await run_analysis_pipeline(
+            plugin=plugin,
+            contract_text=contract_text,
+            registry_text=registry_text,
+            building_text=building_text,
             documents_analyzed=docs_analyzed,
+            job_id=job_id,
         )
+
         logger.info(
-            "[%s] Step 6: 최종 결과 - 등급 %s, 점수 %d, 위험 %d건, 교차검증 %d건 (%.1fs)",
-            job_id, result.grade, result.score,
-            len(result.detected_risks), len(cross_checks),
-            time.time() - t0,
+            "[%s] 분석 완료 - 등급 %s, 점수 %d (%.1fs)",
+            job_id, result.grade, result.score, time.time() - t0,
         )
 
         return result

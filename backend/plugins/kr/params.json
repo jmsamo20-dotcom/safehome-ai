@@ -1,0 +1,33 @@
+{
+  "country_code": "KR",
+  "currency": "KRW",
+  "ocr_languages": "kor+eng",
+  "min_contract_months": 24,
+  "deposit_ratio_warning": 0.5,
+  "deposit_ratio_danger": 1.2,
+  "priority_repayment": {
+    "서울": {
+      "deposit_max": 165000000,
+      "repayment_max": 55000000
+    },
+    "수도권과밀억제권역": {
+      "deposit_max": 145000000,
+      "repayment_max": 48000000
+    },
+    "광역시": {
+      "deposit_max": 85000000,
+      "repayment_max": 28000000
+    },
+    "기타": {
+      "deposit_max": 75000000,
+      "repayment_max": 25000000
+    }
+  },
+  "legal_references": {
+    "tenant_protection_act": "주택임대차보호법",
+    "civil_act": "민법",
+    "building_act": "건축법",
+    "tax_act": "국세기본법",
+    "trust_act": "신탁법"
+  }
+}
