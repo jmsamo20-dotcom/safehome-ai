@@ -164,15 +164,23 @@ PREFIX_TO_CATEGORY = {
 }
 
 
-def analyze_with_llm(ocr_text: str) -> list[DetectedRisk]:
-    """Claude API로 계약서 텍스트를 분석하여 위험 요소 탐지"""
+class LLMResult:
+    """LLM 분석 결과: 위험 요소 + 추출된 계약 정보"""
+    def __init__(self, risks: list[DetectedRisk], extracted: dict | None = None, document_type: str | None = None):
+        self.risks = risks
+        self.extracted = extracted
+        self.document_type = document_type
+
+
+def analyze_with_llm(ocr_text: str) -> LLMResult:
+    """Claude API로 계약서 텍스트를 분석하여 위험 요소 + 추출 정보 반환"""
     if not ANTHROPIC_API_KEY:
         logger.warning("ANTHROPIC_API_KEY not set, skipping LLM analysis")
-        return []
+        return LLMResult(risks=[])
 
     if not ocr_text or len(ocr_text) < 50:
         logger.warning("OCR 텍스트가 너무 짧음 (%d자), LLM 분석 건너뜀", len(ocr_text))
-        return []
+        return LLMResult(risks=[])
 
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
@@ -200,10 +208,12 @@ def analyze_with_llm(ocr_text: str) -> list[DetectedRisk]:
         data = json.loads(response_text)
 
         # 응답 구조 파싱 (전체 객체 vs 배열 호환)
+        extracted = None
+        doc_type = None
         if isinstance(data, dict):
             risks_data = data.get("risks", [])
             doc_type = data.get("document_type_guess", "확인 불가")
-            extracted = data.get("extracted", {})
+            extracted = data.get("extracted")
             logger.info(
                 "LLM 문서 유형: %s, 추출 정보 키: %s",
                 doc_type,
@@ -231,11 +241,11 @@ def analyze_with_llm(ocr_text: str) -> list[DetectedRisk]:
             ))
 
         logger.info("LLM 분석 완료: %d개 위험 요소 탐지", len(detected))
-        return detected
+        return LLMResult(risks=detected, extracted=extracted, document_type=doc_type)
 
     except json.JSONDecodeError as e:
         logger.error("LLM 응답 JSON 파싱 실패: %s", str(e))
-        return []
+        return LLMResult(risks=[])
     except Exception as e:
         logger.error("LLM 분석 실패: %s", str(e))
-        return []
+        return LLMResult(risks=[])

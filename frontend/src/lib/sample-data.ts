@@ -56,6 +56,38 @@ export const SAMPLE_RESULT: AnalysisResult = {
         "특약: '임대인은 임차인의 전세보증금반환보증 가입에 적극 협조한다.'",
     },
   ],
+  extracted: {
+    landlord: {
+      name: "김OO",
+      id_hint: "800101-1******",
+      address: "서울특별시 강남구 역삼동 123-45",
+    },
+    tenant: {
+      name: "이OO",
+      id_hint: "950315-2******",
+      address: "서울특별시 마포구 합정동 67-89",
+    },
+    property: {
+      address: "서울특별시 강남구 역삼동 123-45 OO빌라",
+      unit: "제3층 제301호",
+    },
+    money: {
+      deposit: "2억 5,000만원",
+      rent: "월 50만원",
+      maintenance_fee: "월 10만원",
+      payment_day: "매월 25일",
+    },
+    term: {
+      start_date: "2026-03-01",
+      end_date: "2027-02-28",
+    },
+    registry: {
+      owner: "김OO",
+      rights_summary:
+        "을구 제1호 근저당 OO은행 채권최고액 1억 8,000만원 / 을구 제3호 가압류 OO캐피탈 채권금액 5,000만원",
+    },
+  },
+  document_type: "혼합",
   summary:
     "매우 위험한 계약입니다. 가압류가 설정되어 있고, 즉시 명도 동의 강요 조항이 포함되어 있습니다. 이 계약은 재고하시기 바랍니다.",
   disclaimer:

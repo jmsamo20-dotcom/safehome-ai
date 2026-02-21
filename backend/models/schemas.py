@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Any
 from pydantic import BaseModel
 
 
@@ -50,6 +51,8 @@ class AnalysisResult(BaseModel):
     score: int  # 0~100 (100이 가장 안전)
     detected_risks: list[DetectedRisk]
     summary: str  # 전체 요약 (쉬운 말)
+    extracted: dict[str, Any] | None = None  # LLM이 추출한 계약 정보
+    document_type: str | None = None  # 문서 유형 추정
     disclaimer: str = (
         "본 분석은 AI 기반 참고 정보이며, 법률 자문이 아닙니다. "
         "정확한 판단을 위해 법률 전문가 상담을 권장합니다."

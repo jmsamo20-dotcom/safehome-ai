@@ -2,19 +2,125 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import type { AnalysisResult } from "@/lib/types";
+import type { AnalysisResult, ExtractedInfo } from "@/lib/types";
 
 const GRADE_COLORS: Record<
   string,
-  { bg: string; text: string; label: string }
+  { bg: string; text: string; border: string; label: string }
 > = {
-  A: { bg: "bg-green-100", text: "text-green-700", label: "안전" },
-  B: { bg: "bg-green-50", text: "text-green-600", label: "양호" },
-  C: { bg: "bg-yellow-50", text: "text-yellow-700", label: "보통" },
-  D: { bg: "bg-orange-50", text: "text-orange-700", label: "주의" },
-  E: { bg: "bg-red-50", text: "text-red-600", label: "위험" },
-  F: { bg: "bg-red-100", text: "text-red-700", label: "매우 위험" },
+  A: { bg: "bg-green-100", text: "text-green-700", border: "border-green-200", label: "안전" },
+  B: { bg: "bg-green-50", text: "text-green-600", border: "border-green-100", label: "양호" },
+  C: { bg: "bg-yellow-50", text: "text-yellow-700", border: "border-yellow-200", label: "보통" },
+  D: { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-200", label: "주의" },
+  E: { bg: "bg-red-50", text: "text-red-600", border: "border-red-200", label: "위험" },
+  F: { bg: "bg-red-100", text: "text-red-700", border: "border-red-300", label: "매우 위험" },
 };
+
+const CATEGORY_LABELS: Record<string, string> = {
+  contract: "계약 조항",
+  special: "특약 사항",
+  registry: "등기부",
+  situation: "상황 정보",
+};
+
+function InfoValue({ value }: { value?: string }) {
+  const isUnknown = !value || value === "확인 불가";
+  return (
+    <span className={isUnknown ? "text-gray-400" : "text-gray-900 font-medium"}>
+      {isUnknown ? "확인 불가" : value}
+    </span>
+  );
+}
+
+function ExtractedInfoSection({ extracted }: { extracted: ExtractedInfo }) {
+  const sections = [
+    {
+      title: "당사자",
+      icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z",
+      items: [
+        { label: "임대인", value: extracted.landlord?.name },
+        { label: "임차인", value: extracted.tenant?.name },
+      ],
+    },
+    {
+      title: "금액",
+      icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
+      items: [
+        { label: "보증금", value: extracted.money?.deposit },
+        { label: "월세", value: extracted.money?.rent },
+        { label: "관리비", value: extracted.money?.maintenance_fee },
+      ],
+    },
+    {
+      title: "계약 기간",
+      icon: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z",
+      items: [
+        { label: "시작일", value: extracted.term?.start_date },
+        { label: "종료일", value: extracted.term?.end_date },
+      ],
+    },
+    {
+      title: "등기부 요약",
+      icon: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4",
+      items: [
+        { label: "소유자", value: extracted.registry?.owner },
+        { label: "권리관계", value: extracted.registry?.rights_summary },
+      ],
+    },
+  ];
+
+  return (
+    <div className="mb-6">
+      <h3 className="font-semibold text-gray-900 mb-3">AI가 읽은 계약 정보</h3>
+      <div className="grid grid-cols-2 gap-3">
+        {sections.map((section) => (
+          <div
+            key={section.title}
+            className="bg-white rounded-xl border border-gray-200 p-3"
+          >
+            <div className="flex items-center gap-1.5 mb-2">
+              <svg
+                className="w-4 h-4 text-blue-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d={section.icon}
+                />
+              </svg>
+              <span className="text-xs font-semibold text-gray-500">
+                {section.title}
+              </span>
+            </div>
+            <div className="space-y-1">
+              {section.items.map((item) => (
+                <div key={item.label} className="text-xs">
+                  <span className="text-gray-400">{item.label}: </span>
+                  <InfoValue value={item.value} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      {extracted.property?.address && (
+        <div className="mt-3 bg-white rounded-xl border border-gray-200 p-3">
+          <div className="text-xs">
+            <span className="text-gray-400">물건 소재지: </span>
+            <span className="text-gray-900 font-medium">
+              {extracted.property.address}
+              {extracted.property.unit && ` ${extracted.property.unit}`}
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ResultPage() {
   const router = useRouter();
@@ -23,7 +129,6 @@ export default function ResultPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
-    // sessionStorage에서 결과 또는 에러 로드
     const storedResult = sessionStorage.getItem("safehome_result");
     const storedError = sessionStorage.getItem("safehome_error");
 
@@ -35,7 +140,6 @@ export default function ResultPage() {
       setError(storedError);
       sessionStorage.removeItem("safehome_error");
     } else {
-      // 직접 접근 시 업로드 페이지로
       router.push("/upload");
     }
   }, [router]);
@@ -76,10 +180,22 @@ export default function ResultPage() {
 
   const gradeStyle = GRADE_COLORS[result.grade] || GRADE_COLORS.C;
 
+  // 카테고리별 위험 요소 집계
+  const categoryRisks = result.detected_risks.reduce(
+    (acc, risk) => {
+      const cat = risk.category || "contract";
+      if (!acc[cat]) acc[cat] = { count: 0, maxSeverity: 0 };
+      acc[cat].count++;
+      acc[cat].maxSeverity = Math.max(acc[cat].maxSeverity, risk.severity);
+      return acc;
+    },
+    {} as Record<string, { count: number; maxSeverity: number }>
+  );
+
   return (
     <div className="pb-8">
-      {/* 위험도 등급 */}
-      <div className={`${gradeStyle.bg} rounded-2xl p-6 text-center mb-6`}>
+      {/* ── [1] HERO: 등급 + 점수 + 요약 ── */}
+      <div className={`${gradeStyle.bg} rounded-2xl p-6 text-center mb-4`}>
         <p className="text-sm text-gray-500 mb-1">위험도 등급</p>
         <div className={`text-6xl font-black ${gradeStyle.text} mb-1`}>
           {result.grade}
@@ -106,17 +222,65 @@ export default function ResultPage() {
         </div>
       </div>
 
-      {/* 쉬운 말 요약 */}
+      {/* 요약 */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
-        <h3 className="font-semibold text-gray-900 mb-2">요약</h3>
         <p className="text-gray-700 text-sm leading-relaxed">
           {result.summary}
         </p>
       </div>
 
-      {/* 위험 조항 리스트 */}
+      {/* 카테고리별 위험도 바 */}
       {result.detected_risks.length > 0 && (
-        <>
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+          <h3 className="text-xs font-semibold text-gray-500 mb-3">
+            카테고리별 위험도
+          </h3>
+          <div className="space-y-2">
+            {Object.entries(categoryRisks).map(([cat, data]) => (
+              <div key={cat} className="flex items-center gap-2">
+                <span className="text-xs text-gray-500 w-16 shrink-0">
+                  {CATEGORY_LABELS[cat] || cat}
+                </span>
+                <div className="flex-1 bg-gray-100 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full ${
+                      data.maxSeverity >= 9
+                        ? "bg-red-500"
+                        : data.maxSeverity >= 6
+                        ? "bg-orange-400"
+                        : "bg-yellow-400"
+                    }`}
+                    style={{
+                      width: `${Math.min(100, data.maxSeverity * 10)}%`,
+                    }}
+                  />
+                </div>
+                <span className="text-xs text-gray-400 w-6 text-right">
+                  {data.count}건
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 스크롤 유도 버튼 */}
+      {result.detected_risks.length > 0 && (
+        <button
+          onClick={() =>
+            document
+              .getElementById("risk-list")
+              ?.scrollIntoView({ behavior: "smooth" })
+          }
+          className={`w-full py-3 rounded-xl font-semibold transition mb-6 border ${gradeStyle.border} ${gradeStyle.bg} ${gradeStyle.text}`}
+        >
+          위험 요소 {result.detected_risks.length}건 확인하기
+        </button>
+      )}
+
+      {/* ── [2] 위험 요소 리스트 ── */}
+      {result.detected_risks.length > 0 && (
+        <div id="risk-list">
           <h3 className="font-semibold text-gray-900 mb-3">
             탐지된 위험 요소 ({result.detected_risks.length}건)
           </h3>
@@ -185,10 +349,67 @@ export default function ResultPage() {
               </div>
             ))}
           </div>
-        </>
+        </div>
       )}
 
-      {/* 다시 분석하기 */}
+      {/* ── [3] 추출된 계약 정보 ── */}
+      {result.extracted && <ExtractedInfoSection extracted={result.extracted} />}
+
+      {/* ── [4] 행동 유도 (Next Action) ── */}
+      <div className="bg-blue-50 rounded-xl border border-blue-100 p-4 mb-4">
+        <h3 className="text-sm font-semibold text-blue-800 mb-3">
+          다음에 할 일
+        </h3>
+        <div className="space-y-2">
+          {result.detected_risks.length > 0 && (
+            <button
+              onClick={() => {
+                const allSuggestions = result.detected_risks
+                  .map(
+                    (r) =>
+                      `[${r.risk_name}]\n${r.suggestion}`
+                  )
+                  .join("\n\n");
+                handleCopy(allSuggestions, "all-suggestions");
+              }}
+              className="w-full flex items-center gap-3 bg-white rounded-lg p-3 text-left hover:bg-blue-50 transition border border-blue-100"
+            >
+              <span className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
+                <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                </svg>
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">
+                  {copiedId === "all-suggestions"
+                    ? "모든 특약 복사됨!"
+                    : "수정 특약 전체 복사"}
+                </p>
+                <p className="text-xs text-gray-500">
+                  중개사에게 보여주며 협상하세요
+                </p>
+              </div>
+            </button>
+          )}
+          <div className="w-full flex items-center gap-3 bg-white rounded-lg p-3 border border-blue-100">
+            <span className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
+              <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">
+                법률 전문가 상담 받기
+              </p>
+              <p className="text-xs text-gray-500">
+                대한법률구조공단 132 / 주택임대차분쟁조정위원회 1533-8119
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── [5] CTA + 면책 ── */}
       <button
         onClick={() => router.push("/upload")}
         className="w-full py-3 bg-gray-900 text-white rounded-xl font-semibold hover:bg-gray-800 transition mb-4"
@@ -196,7 +417,6 @@ export default function ResultPage() {
         다른 계약서 분석하기
       </button>
 
-      {/* 면책 고지 */}
       <div className="bg-gray-100 rounded-lg p-4">
         <p className="text-xs text-gray-500 leading-relaxed">
           {result.disclaimer}

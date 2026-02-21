@@ -61,12 +61,17 @@ async def analyze_contract(
             rule_detected.append(period_risk)
         logger.info("[%s] Step 3: Rule 탐지 - %d건 (%.1fs)", job_id, len(rule_detected), time.time() - t0)
 
-        # Step 4: LLM 분석 (MEDIUM 등급)
-        llm_detected = await asyncio.to_thread(analyze_with_llm, ocr_text)
-        logger.info("[%s] Step 4: LLM 분석 - %d건 (%.1fs)", job_id, len(llm_detected), time.time() - t0)
+        # Step 4: LLM 분석 (MEDIUM 등급 + 계약 정보 추출)
+        llm_result = await asyncio.to_thread(analyze_with_llm, ocr_text)
+        logger.info("[%s] Step 4: LLM 분석 - %d건 (%.1fs)", job_id, len(llm_result.risks), time.time() - t0)
 
         # Step 5: 최종 결과 생성
-        result = build_analysis_result(rule_detected, llm_detected)
+        result = build_analysis_result(
+            rule_detected,
+            llm_result.risks,
+            extracted=llm_result.extracted,
+            document_type=llm_result.document_type,
+        )
         logger.info(
             "[%s] Step 5: 최종 결과 - 등급 %s, 점수 %d, 위험 %d건 (%.1fs)",
             job_id, result.grade, result.score, len(result.detected_risks), time.time() - t0,

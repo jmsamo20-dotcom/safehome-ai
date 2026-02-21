@@ -18,14 +18,20 @@ from data.risk_definitions import RISK_DEFINITIONS
 # ── HIGH 등급 키워드 탐지 규칙 ──
 
 KEYWORD_RULES: dict[str, list[str]] = {
-    "B-2": ["대항력 포기", "우선변제권 포기", "우선변제권 미행사", "대항력을 행사하지"],
+    "B-2": [
+        "대항력 포기", "우선변제권 포기", "우선변제권 미행사", "대항력을 행사하지",
+        "일체의 이의를 제기하지", "순위 보전을 요구하지", "후순위임을 인정",
+    ],
     "B-5": ["보증보험 가입 불가", "보증보험 협조 불가", "보증보험.*거부", "보증보험.*안 함"],
-    "B-6": ["제소전 화해", "즉시 명도", "무조건 퇴거", "즉시 퇴거", "명도 동의"],
-    "C-1": ["압류", "가압류", "가처분"],
+    "B-6": [
+        "제소전 화해", "즉시 명도", "무조건 퇴거", "즉시 퇴거", "명도 동의",
+        "자진 퇴거", "강제집행에 동의", "명도 소송 없이", "열쇠를 반납",
+    ],
+    "C-1": ["압류", "가압류", "가처분", "경매개시결정", "예고등기"],
     "C-2": ["신탁", "신탁등기", "부동산신탁"],
     "C-3": ["임차권등기"],
     "C-5": ["전세권 설정", "전세권설정"],
-    "D-2": ["위반건축물"],
+    "D-2": ["위반건축물", "무단 용도변경", "불법 건축"],
 }
 
 
@@ -159,6 +165,8 @@ def calculate_grade(detected_risks: list[DetectedRisk]) -> tuple[RiskGrade, int]
 def build_analysis_result(
     rule_detected: list[DetectedRisk],
     llm_detected: list[DetectedRisk] | None = None,
+    extracted: dict | None = None,
+    document_type: str | None = None,
 ) -> AnalysisResult:
     """Rule + LLM 결과를 합쳐서 최종 분석 결과 생성"""
     all_detected = rule_detected.copy()
@@ -188,4 +196,6 @@ def build_analysis_result(
         score=score,
         detected_risks=all_detected,
         summary=summary,
+        extracted=extracted,
+        document_type=document_type,
     )
