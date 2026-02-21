@@ -6,6 +6,7 @@ export interface DetectedRisk {
   matched_text: string;
   explanation: string;
   suggestion: string;
+  standard_risk_code?: string; // SSRI 글로벌 표준 코드 (예: SSRI-001)
 }
 
 export interface ExtractedInfo {

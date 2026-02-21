@@ -75,6 +75,7 @@ export const SAMPLE_CAUTION: AnalysisResult = {
       risk_name: "가압류 설정",
       category: "registry",
       severity: 10,
+      standard_risk_code: "SSRI-007",
       matched_text:
         "...을구 제3호 가압류 채권자 OO캐피탈 채권금액 금 50,000,000원...",
       explanation:
@@ -87,6 +88,7 @@ export const SAMPLE_CAUTION: AnalysisResult = {
       risk_name: "즉시 명도 동의 강요",
       category: "special",
       severity: 10,
+      standard_risk_code: "SSRI-006",
       matched_text:
         "...임차인은 계약 만료 시 제소전 화해에 동의하며 즉시 명도한다...",
       explanation:
@@ -99,6 +101,7 @@ export const SAMPLE_CAUTION: AnalysisResult = {
       risk_name: "임대차 기간 2년 미만",
       category: "contract",
       severity: 6,
+      standard_risk_code: "SSRI-010",
       matched_text: "임대차 기간 12개월",
       explanation:
         "주택임대차보호법상 최소 2년이 보장되는데, 1년으로 계약되어 있습니다. 갱신 요구권이 약해질 수 있습니다.",
@@ -110,6 +113,7 @@ export const SAMPLE_CAUTION: AnalysisResult = {
       risk_name: "보증보험 가입 협조 거부",
       category: "special",
       severity: 9,
+      standard_risk_code: "SSRI-013",
       matched_text:
         "...임대인은 전세보증금반환보증보험 가입에 협조할 의무가 없다...",
       explanation:
@@ -188,6 +192,7 @@ export const SAMPLE_FRAUD: AnalysisResult = {
       risk_name: "당일 권리 변동 (갭투자 의심)",
       category: "registry",
       severity: 10,
+      standard_risk_code: "SSRI-015",
       matched_text:
         "...갑구 제5호 소유권이전 2026년 2월 15일 접수 매매 / 본 임대차계약일 2026년 2월 15일...",
       explanation:
@@ -200,6 +205,7 @@ export const SAMPLE_FRAUD: AnalysisResult = {
       risk_name: "과다 근저당 (깡통전세)",
       category: "registry",
       severity: 10,
+      standard_risk_code: "SSRI-003",
       matched_text:
         "...을구 제1호 근저당권설정 채권최고액 금 360,000,000원 채무자 박OO 근저당권자 OO은행...",
       explanation:
@@ -212,6 +218,7 @@ export const SAMPLE_FRAUD: AnalysisResult = {
       risk_name: "우선변제권 포기 강요",
       category: "special",
       severity: 10,
+      standard_risk_code: "SSRI-005",
       matched_text:
         "...임차인은 본 부동산에 대한 일체의 이의를 제기하지 아니하며 후순위임을 인정한다...",
       explanation:
@@ -224,6 +231,7 @@ export const SAMPLE_FRAUD: AnalysisResult = {
       risk_name: "강제집행 동의 조항",
       category: "special",
       severity: 10,
+      standard_risk_code: "SSRI-006",
       matched_text:
         "...임차인은 계약 종료 시 별도의 명도 소송 없이 자진 퇴거하며 강제집행에 동의한다...",
       explanation:
@@ -236,6 +244,7 @@ export const SAMPLE_FRAUD: AnalysisResult = {
       risk_name: "보증보험 가입 거부",
       category: "special",
       severity: 9,
+      standard_risk_code: "SSRI-013",
       matched_text:
         "...전세보증금반환보증 관련 일체의 서류 제공 및 협조 불가...",
       explanation:

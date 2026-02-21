@@ -65,6 +65,26 @@ const CATEGORY_LABELS: Record<string, string> = {
   situation: "상황 정보",
 };
 
+// SSRI 글로벌 표준 코드 라벨 (영문)
+const SSRI_LABELS: Record<string, string> = {
+  "SSRI-001": "Owner Mismatch",
+  "SSRI-002": "Subletting Risk",
+  "SSRI-003": "Excessive Secured Debt",
+  "SSRI-004": "Deposit Discrepancy",
+  "SSRI-005": "Coerced Rights Waiver",
+  "SSRI-006": "Forced Eviction Clause",
+  "SSRI-007": "Seizure / Attachment",
+  "SSRI-008": "Trust Encumbrance",
+  "SSRI-009": "Prior Tenant Claims",
+  "SSRI-010": "Short-term Lease",
+  "SSRI-011": "Tax Default Liability",
+  "SSRI-012": "Building Code Violation",
+  "SSRI-013": "Insurance Refusal",
+  "SSRI-014": "Maintenance Burden Shift",
+  "SSRI-015": "Same-day Rights Change",
+  "SSRI-999": "Country-specific Risk",
+};
+
 function InfoValue({ value }: { value?: string }) {
   const isUnknown = !value || value === "확인 불가";
   return (
@@ -628,28 +648,43 @@ export default function ResultPage() {
                 key={risk.risk_id}
                 className="bg-white rounded-xl border border-gray-200 overflow-hidden print-keep print-border"
               >
-                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`px-2 py-0.5 rounded text-xs font-bold ${
-                        risk.severity >= 9
-                          ? "bg-red-100 text-red-700"
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`px-2 py-0.5 rounded text-xs font-bold ${
+                          risk.severity >= 9
+                            ? "bg-red-100 text-red-700"
+                            : risk.severity >= 6
+                            ? "bg-orange-100 text-orange-700"
+                            : "bg-yellow-100 text-yellow-700"
+                        }`}
+                      >
+                        {risk.severity >= 9
+                          ? "위험"
                           : risk.severity >= 6
-                          ? "bg-orange-100 text-orange-700"
-                          : "bg-yellow-100 text-yellow-700"
-                      }`}
-                    >
-                      {risk.severity >= 9
-                        ? "위험"
-                        : risk.severity >= 6
-                        ? "주의"
-                        : "참고"}
-                    </span>
-                    <span className="font-semibold text-gray-900 text-sm">
-                      {risk.risk_name}
-                    </span>
+                          ? "주의"
+                          : "참고"}
+                      </span>
+                      <span className="font-semibold text-gray-900 text-sm">
+                        {risk.risk_name}
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-400">{risk.risk_id}</span>
                   </div>
-                  <span className="text-xs text-gray-400">{risk.risk_id}</span>
+                  {risk.standard_risk_code && SSRI_LABELS[risk.standard_risk_code] && (
+                    <div className="mt-1.5 flex items-center gap-1.5">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 border border-indigo-200 rounded-full text-xs text-indigo-600 font-medium">
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {risk.standard_risk_code}
+                      </span>
+                      <span className="text-xs text-indigo-400">
+                        {SSRI_LABELS[risk.standard_risk_code]}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="px-4 py-3 bg-red-50/50">
@@ -728,6 +763,19 @@ export default function ResultPage() {
                           {risk.risk_id} ({CATEGORY_LABELS[risk.category] || risk.category})
                         </span>
                       </div>
+                      {risk.standard_risk_code && (
+                        <div className="flex gap-2">
+                          <span className="text-gray-400 shrink-0 w-16">글로벌</span>
+                          <span className="text-indigo-600 font-medium">
+                            {risk.standard_risk_code}
+                            {SSRI_LABELS[risk.standard_risk_code] && (
+                              <span className="text-indigo-400 font-normal ml-1">
+                                ({SSRI_LABELS[risk.standard_risk_code]})
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
