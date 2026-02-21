@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { analyzeContract } from "@/lib/api";
+import { SAMPLE_RESULT } from "@/lib/sample-data";
 
 const ANALYZE_STEPS = [
   "문서 읽는 중...",
@@ -77,6 +78,11 @@ export default function UploadPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) handleFile(file);
+  };
+
+  const handleSampleDemo = () => {
+    sessionStorage.setItem("safehome_result", JSON.stringify(SAMPLE_RESULT));
+    router.push("/result");
   };
 
   // ── 분석 중 화면 ──
@@ -172,6 +178,24 @@ export default function UploadPage() {
           <p className="text-red-600 text-sm">{error}</p>
         </div>
       )}
+
+      {/* 샘플 체험 */}
+      <div className="mt-8 w-full max-w-sm">
+        <div className="relative flex items-center mb-4">
+          <div className="flex-grow border-t border-gray-200" />
+          <span className="mx-3 text-gray-400 text-xs">또는</span>
+          <div className="flex-grow border-t border-gray-200" />
+        </div>
+        <button
+          onClick={handleSampleDemo}
+          className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition text-sm"
+        >
+          샘플 계약서로 체험하기
+        </button>
+        <p className="text-center text-gray-400 text-xs mt-2">
+          위험 요소가 포함된 예시 계약서 분석 결과를 확인합니다
+        </p>
+      </div>
     </div>
   );
 }
