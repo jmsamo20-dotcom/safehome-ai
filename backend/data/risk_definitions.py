@@ -1,6 +1,12 @@
 """
 Gemini 조사 결과 기반 - 전월세 계약 위험 요소 정의
 25개 항목 (카테고리 A~D)
+
+Gemini QA 피드백 반영 (2026-02-22):
+- D-2 severity: 7 → 10 (F트리거 추가)
+- B-6 severity: 7 → 10, detection_level: MEDIUM → HIGH (F트리거 추가)
+- C-6 severity: 8 → 10 (D에서 F로 상향)
+- C-5 severity: 8 → 10 (E트리거 추가)
 """
 
 from models.schemas import RiskCategory, DetectionLevel
@@ -111,12 +117,12 @@ RISK_DEFINITIONS = [
         "id": "B-6",
         "name": "즉시 명도 동의 강요",
         "category": RiskCategory.SPECIAL_TERMS,
-        "description": "계약 종료 시 조건 없이 즉시 퇴거에 동의하도록 하는 조항.",
+        "description": "보증금을 돌려받지 못한 상태에서도 즉시 퇴거에 동의하도록 강요하는 독소 조항. 주택임대차보호법의 근간을 흔드는 사기 징후.",
         "legal_basis": "민사집행법 제56조",
-        "detection_level": DetectionLevel.MEDIUM,
-        "severity": 7,
-        "trigger": "'제소전 화해', '조건 없이 즉시 퇴거' 문맥 분석",
-        "suggestion": "특약: '임대인은 보증금 전액 반환 완료 전까지 명도를 요구할 수 없다.'",
+        "detection_level": DetectionLevel.HIGH,  # Gemini QA: MEDIUM → HIGH
+        "severity": 10,  # Gemini QA: 7 → 10 (F트리거)
+        "trigger": "'제소전 화해', '즉시 명도', '무조건 퇴거' 키워드",
+        "suggestion": "특약: '임대인은 보증금 전액 반환 완료 전까지 명도를 요구할 수 없다.' 이 조항이 있다면 계약을 재고하세요.",
     },
     # ── 카테고리 C: 등기부등본 ──
     {
@@ -134,12 +140,12 @@ RISK_DEFINITIONS = [
         "id": "C-2",
         "name": "신탁등기",
         "category": RiskCategory.REGISTRY,
-        "description": "소유권이 신탁회사에 있는 경우. 신탁원부 확인 없이 계약하면 보증금을 잃을 수 있음.",
+        "description": "소유권이 신탁회사에 있는 경우. 신탁원부 확인 없이 계약하면 보증금을 잃을 수 있음. 신탁회사의 수익권자 동의서 미비 시 계약 무효 위험.",
         "legal_basis": "신탁법 제2조",
         "detection_level": DetectionLevel.HIGH,
         "severity": 10,
         "trigger": "갑구 소유권자에 'OO신탁' 키워드",
-        "suggestion": "⚠️ 신탁원부를 반드시 확인하세요. 신탁사의 동의서 없는 계약은 무효가 될 수 있습니다. 법률 전문가 상담을 강력 권장합니다.",
+        "suggestion": "신탁원부를 반드시 확인하세요. 신탁사의 동의서 없는 계약은 무효가 될 수 있습니다. 법률 전문가 상담을 강력 권장합니다.",
     },
     {
         "id": "C-3",
@@ -167,23 +173,23 @@ RISK_DEFINITIONS = [
         "id": "C-5",
         "name": "선순위 전세권 존재",
         "category": RiskCategory.REGISTRY,
-        "description": "이미 다른 사람의 전세권이 설정되어 있어, 내 보증금이 후순위가 됨.",
+        "description": "이미 다른 사람의 전세권이 설정되어 있어, 경매 시 내 보증금이 후순위가 됨. 보증금 전액 미회수 위험.",
         "legal_basis": "민법 제303조",
         "detection_level": DetectionLevel.HIGH,
-        "severity": 8,
+        "severity": 10,  # Gemini QA: 8 → 10 (E트리거, F에 준하는 위험)
         "trigger": "을구 내 타인 명의 '전세권 설정' 키워드",
-        "suggestion": "선순위 전세권 금액과 내 보증금 합계가 시세를 초과하면 위험합니다. 금액을 확인하세요.",
+        "suggestion": "선순위 전세권이 있으면 경매 시 내 보증금은 후순위입니다. 금액을 확인하고, 합산액이 시세를 초과하면 계약하지 마세요.",
     },
     {
         "id": "C-6",
         "name": "당일 권리 변동",
         "category": RiskCategory.REGISTRY,
-        "description": "계약일에 소유권 이전이나 대출 실행이 동시에 이루어지는 경우. 갭투자 위험.",
+        "description": "계약일에 소유권 이전이나 대출 실행이 동시에 이루어지는 경우. 전세사기 1순위 수법. 전입신고 효력은 익일 0시부터 발생하나 근저당은 당일 발생하는 법적 허점 이용.",
         "legal_basis": "민법 제186조",
         "detection_level": DetectionLevel.MEDIUM,
-        "severity": 8,
+        "severity": 10,  # Gemini QA: 8 → 10 (D에서 F로 상향, 타협 불가)
         "trigger": "소유권 이전일 == 계약일 또는 근접 날짜",
-        "suggestion": "계약일에 소유권 변동이 있으면 갭투자 의심. 잔금일 당일 등기부를 반드시 재확인하세요.",
+        "suggestion": "계약일에 소유권 변동이 있으면 전세사기 가능성이 매우 높습니다. 잔금일 당일 등기부를 반드시 재확인하고, 법률 전문가 상담을 받으세요.",
     },
     # ── 카테고리 D: 상황 정보 ──
     {
@@ -201,12 +207,12 @@ RISK_DEFINITIONS = [
         "id": "D-2",
         "name": "위반 건축물",
         "category": RiskCategory.SITUATION,
-        "description": "건축물대장에 위반건축물로 표시된 경우. 전입신고나 확정일자 효력에 영향.",
+        "description": "건축물대장에 위반건축물로 표시된 경우. 전세자금대출이 불가능하며, 강제이행금 부과 및 철거 위험. 보증금 전액 손실 가능.",
         "legal_basis": "건축법 제79조",
         "detection_level": DetectionLevel.HIGH,
-        "severity": 7,
+        "severity": 10,  # Gemini QA: 7 → 10 (F트리거 추가)
         "trigger": "건축물대장 내 '위반건축물' 텍스트",
-        "suggestion": "위반건축물은 전입신고·확정일자가 정상 적용되지 않을 수 있습니다. 계약 전 구청에 확인하세요.",
+        "suggestion": "위반건축물은 전세자금대출 불가이며, 전입신고·확정일자가 정상 적용되지 않을 수 있습니다. 절대 계약하지 마세요.",
     },
     {
         "id": "D-3",

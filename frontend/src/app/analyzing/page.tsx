@@ -15,21 +15,17 @@ export default function AnalyzingPage() {
   const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
+    // 단계별 애니메이션
     const interval = setInterval(() => {
-      setCurrentStep((prev) => {
-        if (prev < STEPS.length - 1) return prev + 1;
-        return prev;
-      });
+      setCurrentStep((prev) => (prev < STEPS.length - 1 ? prev + 1 : prev));
     }, 2000);
 
-    // Mock: 8초 후 결과 페이지로 이동 (실제로는 API 응답 후)
-    const timer = setTimeout(() => {
-      router.push("/result");
-    }, 8000);
+    // 안전장치: API 타임아웃(3분) 후에도 결과가 없으면 업로드로 복귀
+    const safety = setTimeout(() => router.push("/upload"), 180000);
 
     return () => {
       clearInterval(interval);
-      clearTimeout(timer);
+      clearTimeout(safety);
     };
   }, [router]);
 
