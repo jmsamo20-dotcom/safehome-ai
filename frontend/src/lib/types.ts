@@ -29,6 +29,13 @@ export interface DepositSimulation {
   safe_factors: string[];
 }
 
+export interface CrossCheckItem {
+  label: string;
+  status: "ok" | "warning" | "danger";
+  detail: string;
+  source?: string;
+}
+
 export interface AnalysisResult {
   grade: "A" | "B" | "C" | "D" | "E" | "F";
   score: number;
@@ -38,4 +45,6 @@ export interface AnalysisResult {
   extracted?: ExtractedInfo;
   document_type?: string;
   simulation?: DepositSimulation;
+  cross_checks?: CrossCheckItem[];
+  documents_analyzed?: string[];
 }

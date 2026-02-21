@@ -2,9 +2,15 @@ import { API_BASE_URL } from "./constants";
 
 const ANALYZE_TIMEOUT_MS = 3 * 60 * 1000; // 3분
 
-export async function analyzeContract(file: File) {
+export async function analyzeContract(
+  file: File,
+  registryFile?: File | null,
+  buildingFile?: File | null,
+) {
   const formData = new FormData();
   formData.append("contract_image", file);
+  if (registryFile) formData.append("registry_image", registryFile);
+  if (buildingFile) formData.append("building_image", buildingFile);
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ANALYZE_TIMEOUT_MS);

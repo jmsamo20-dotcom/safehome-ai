@@ -46,6 +46,19 @@ class DetectedRisk(BaseModel):
     suggestion: str  # 수정 특약 제안
 
 
+class CrossCheckStatus(str, Enum):
+    OK = "ok"
+    WARNING = "warning"
+    DANGER = "danger"
+
+
+class CrossCheckItem(BaseModel):
+    label: str          # "임대인 = 소유자"
+    status: CrossCheckStatus
+    detail: str         # "일치" / "불일치 — 사기 가능성"
+    source: str = ""    # "계약서 ↔ 등기부" 등
+
+
 class AnalysisResult(BaseModel):
     grade: RiskGrade
     score: int  # 0~100 (100이 가장 안전)
@@ -53,6 +66,8 @@ class AnalysisResult(BaseModel):
     summary: str  # 전체 요약 (쉬운 말)
     extracted: dict[str, Any] | None = None  # LLM이 추출한 계약 정보
     document_type: str | None = None  # 문서 유형 추정
+    cross_checks: list[CrossCheckItem] | None = None  # 교차 검증 결과
+    documents_analyzed: list[str] | None = None  # ["contract", "registry", ...]
     disclaimer: str = (
         "본 분석은 AI 기반 참고 정보이며, 법률 자문이 아닙니다. "
         "정확한 판단을 위해 법률 전문가 상담을 권장합니다."

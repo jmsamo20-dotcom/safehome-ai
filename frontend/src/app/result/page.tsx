@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import type { AnalysisResult, ExtractedInfo, DepositSimulation } from "@/lib/types";
+import type { AnalysisResult, ExtractedInfo, DepositSimulation, CrossCheckItem } from "@/lib/types";
 
 const GRADE_COLORS: Record<
   string,
@@ -156,6 +156,126 @@ function DepositSimulationCard({ sim }: { sim: DepositSimulation }) {
           </ul>
         </div>
       )}
+    </div>
+  );
+}
+
+const CHECK_STATUS_STYLES: Record<string, { icon: string; bg: string; text: string; border: string }> = {
+  ok: { icon: "\u2714", bg: "bg-green-50", text: "text-green-700", border: "border-green-200" },
+  warning: { icon: "\u26A0", bg: "bg-yellow-50", text: "text-yellow-700", border: "border-yellow-200" },
+  danger: { icon: "\u2716", bg: "bg-red-50", text: "text-red-700", border: "border-red-200" },
+};
+
+const DOC_LABELS: Record<string, string> = {
+  contract: "계약서",
+  registry: "등기부등본",
+  building: "건축물대장",
+};
+
+function CrossCheckSection({
+  checks,
+  documents,
+}: {
+  checks: CrossCheckItem[];
+  documents?: string[];
+}) {
+  const okCount = checks.filter((c) => c.status === "ok").length;
+  const dangerCount = checks.filter((c) => c.status === "danger").length;
+  const warningCount = checks.filter((c) => c.status === "warning").length;
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-4 print-keep print-border">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <svg
+            className="w-5 h-5 text-blue-600"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+            />
+          </svg>
+          <h3 className="font-bold text-gray-900">교차 검증 결과</h3>
+        </div>
+        {documents && documents.length > 0 && (
+          <div className="flex gap-1">
+            {documents.map((doc) => (
+              <span
+                key={doc}
+                className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full"
+              >
+                {DOC_LABELS[doc] || doc}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 요약 바 */}
+      <div className="flex items-center gap-3 mb-4 text-xs">
+        {okCount > 0 && (
+          <span className="text-green-600 font-semibold">
+            {"\u2714"} {okCount}건 정상
+          </span>
+        )}
+        {warningCount > 0 && (
+          <span className="text-yellow-600 font-semibold">
+            {"\u26A0"} {warningCount}건 미확인
+          </span>
+        )}
+        {dangerCount > 0 && (
+          <span className="text-red-600 font-semibold">
+            {"\u2716"} {dangerCount}건 위험
+          </span>
+        )}
+      </div>
+
+      {/* 체크 항목 */}
+      <div className="space-y-2">
+        {checks.map((check, i) => {
+          const style = CHECK_STATUS_STYLES[check.status] || CHECK_STATUS_STYLES.warning;
+          return (
+            <div
+              key={i}
+              className={`${style.bg} border ${style.border} rounded-xl p-3`}
+            >
+              <div className="flex items-start gap-2.5">
+                <span
+                  className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${style.text} ${
+                    check.status === "ok"
+                      ? "bg-green-100"
+                      : check.status === "danger"
+                      ? "bg-red-100"
+                      : "bg-yellow-100"
+                  }`}
+                >
+                  {style.icon}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className={`text-sm font-semibold ${style.text}`}>
+                      {check.label}
+                    </p>
+                    {check.source && (
+                      <span className="text-xs text-gray-400">
+                        {check.source}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-600 mt-0.5">
+                    {check.detail}
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -410,6 +530,14 @@ export default function ResultPage() {
       {/* ── 보증금 회수 시뮬레이션 ── */}
       {result.simulation && (
         <DepositSimulationCard sim={result.simulation} />
+      )}
+
+      {/* ── 교차 검증 결과 ── */}
+      {result.cross_checks && result.cross_checks.length > 0 && (
+        <CrossCheckSection
+          checks={result.cross_checks}
+          documents={result.documents_analyzed}
+        />
       )}
 
       {/* 카테고리별 위험도 바 */}

@@ -175,6 +175,8 @@ def build_analysis_result(
     llm_detected: list[DetectedRisk] | None = None,
     extracted: dict | None = None,
     document_type: str | None = None,
+    cross_checks: list | None = None,
+    documents_analyzed: list[str] | None = None,
 ) -> AnalysisResult:
     """Rule + LLM 결과를 합쳐서 최종 분석 결과 생성"""
     all_detected = rule_detected.copy()
@@ -206,4 +208,6 @@ def build_analysis_result(
         summary=summary,
         extracted=extracted,
         document_type=document_type,
+        cross_checks=cross_checks,
+        documents_analyzed=documents_analyzed,
     )

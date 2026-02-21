@@ -50,6 +50,12 @@ export const SAMPLE_SAFE: AnalysisResult = {
     ],
   },
   document_type: "혼합",
+  cross_checks: [
+    { label: "임대인 = 등기부 소유자", status: "ok", detail: "일치 확인됨", source: "계약서 ↔ 등기부" },
+    { label: "근저당 없음", status: "ok", detail: "등기부에 근저당이 설정되어 있지 않습니다.", source: "등기부" },
+    { label: "건축물대장 정상", status: "ok", detail: "건축물대장에서 위반 사항이 발견되지 않았습니다.", source: "건축물대장" },
+  ],
+  documents_analyzed: ["contract", "registry", "building"],
   summary:
     "전반적으로 안전한 계약입니다. 등기부에 근저당이나 가압류가 없고, 계약 조건도 법적 기준을 충족합니다.",
   disclaimer:
@@ -156,6 +162,13 @@ export const SAMPLE_CAUTION: AnalysisResult = {
     ],
   },
   document_type: "혼합",
+  cross_checks: [
+    { label: "임대인 = 등기부 소유자", status: "ok", detail: "김OO 일치 확인됨", source: "계약서 ↔ 등기부" },
+    { label: "근저당 대비 보증금 비율", status: "danger", detail: "근저당 1.8억 + 가압류 0.5억 = 2.3억. 보증금 2.5억 대비 채권 비율 92% (위험)", source: "등기부" },
+    { label: "가압류 존재", status: "danger", detail: "OO캐피탈 가압류 5,000만원 설정. 경매 시 보증금 회수 어려움", source: "등기부" },
+    { label: "건축물대장 미제출", status: "warning", detail: "건축물대장이 제출되지 않아 위반 건축물 여부를 확인할 수 없습니다.", source: "건축물대장" },
+  ],
+  documents_analyzed: ["contract", "registry"],
   summary:
     "매우 위험한 계약입니다. 가압류가 설정되어 있고, 즉시 명도 동의 강요 조항이 포함되어 있습니다. 이 계약은 재고하시기 바랍니다.",
   disclaimer:
@@ -274,6 +287,14 @@ export const SAMPLE_FRAUD: AnalysisResult = {
     safe_factors: [],
   },
   document_type: "혼합",
+  cross_checks: [
+    { label: "임대인 = 등기부 소유자", status: "warning", detail: "박OO 일치하나, 매매 당일 소유권 이전 (갭투자 의심)", source: "계약서 ↔ 등기부" },
+    { label: "근저당 대비 보증금 비율", status: "danger", detail: "근저당 3.6억 > 보증금 2.8억. 깡통전세 확정. 경매 시 회수 불가", source: "등기부" },
+    { label: "매매일 = 계약일", status: "danger", detail: "소유권 이전일(2026.02.15)과 전세 계약일이 동일. 전형적 갭투자 패턴", source: "등기부" },
+    { label: "전세보증보험 가입 불가", status: "danger", detail: "임대인이 보증보험 협조를 거부하여 보증보험 가입 불가", source: "계약서" },
+    { label: "건축물대장 미제출", status: "warning", detail: "건축물대장이 제출되지 않아 위반 건축물 여부를 확인할 수 없습니다.", source: "건축물대장" },
+  ],
+  documents_analyzed: ["contract", "registry"],
   summary:
     "매우 위험한 계약입니다. 이 계약은 전형적인 갭투자 전세사기 패턴을 보이고 있습니다. 소유권 이전 당일 전세 계약, 과다 근저당(깡통전세), 우선변제권 포기 강요, 강제집행 동의 조항이 모두 포함되어 있습니다. 즉시 계약을 중단하세요.",
   disclaimer:
