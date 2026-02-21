@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { analyzeContract } from "@/lib/api";
-import { SAMPLE_RESULT } from "@/lib/sample-data";
+import { SAMPLE_CAUTION, SAMPLE_FRAUD } from "@/lib/sample-data";
 
 const ANALYZE_STEPS = [
   "문서 읽는 중...",
@@ -80,8 +80,9 @@ export default function UploadPage() {
     if (file) handleFile(file);
   };
 
-  const handleSampleDemo = () => {
-    sessionStorage.setItem("safehome_result", JSON.stringify(SAMPLE_RESULT));
+  const handleSampleDemo = (type: "caution" | "fraud") => {
+    const sample = type === "caution" ? SAMPLE_CAUTION : SAMPLE_FRAUD;
+    sessionStorage.setItem("safehome_result", JSON.stringify(sample));
     router.push("/result");
   };
 
@@ -183,17 +184,29 @@ export default function UploadPage() {
       <div className="mt-8 w-full max-w-sm">
         <div className="relative flex items-center mb-4">
           <div className="flex-grow border-t border-gray-200" />
-          <span className="mx-3 text-gray-400 text-xs">또는</span>
+          <span className="mx-3 text-gray-400 text-xs">또는 샘플로 체험하기</span>
           <div className="flex-grow border-t border-gray-200" />
         </div>
-        <button
-          onClick={handleSampleDemo}
-          className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition text-sm"
-        >
-          샘플 계약서로 체험하기
-        </button>
-        <p className="text-center text-gray-400 text-xs mt-2">
-          위험 요소가 포함된 예시 계약서 분석 결과를 확인합니다
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => handleSampleDemo("caution")}
+            className="py-4 px-3 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition text-center"
+          >
+            <span className="block text-2xl mb-1">D</span>
+            <span className="block text-sm font-medium text-amber-800">주의 필요</span>
+            <span className="block text-xs text-amber-600 mt-1">가압류 + 독소조항</span>
+          </button>
+          <button
+            onClick={() => handleSampleDemo("fraud")}
+            className="py-4 px-3 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition text-center"
+          >
+            <span className="block text-2xl mb-1">F</span>
+            <span className="block text-sm font-medium text-red-800">전세사기 패턴</span>
+            <span className="block text-xs text-red-600 mt-1">갭투자 + 깡통전세</span>
+          </button>
+        </div>
+        <p className="text-center text-gray-400 text-xs mt-3">
+          실제 사례 기반 샘플 분석 결과를 확인합니다
         </p>
       </div>
     </div>
