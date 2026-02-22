@@ -167,21 +167,22 @@ PREFIX_TO_CATEGORY = {
 
 class LLMResult:
     """LLM 분석 결과: 위험 요소 + 추출된 계약 정보"""
-    def __init__(self, risks: list[DetectedRisk], extracted: dict | None = None, document_type: str | None = None):
+    def __init__(self, risks: list[DetectedRisk], extracted: dict | None = None, document_type: str | None = None, error: str | None = None):
         self.risks = risks
         self.extracted = extracted
         self.document_type = document_type
+        self.error = error  # LLM 실패 사유 (디버깅용)
 
 
 def analyze_with_llm(ocr_text: str) -> LLMResult:
     """Claude API로 계약서 텍스트를 분석하여 위험 요소 + 추출 정보 반환"""
     if not ANTHROPIC_API_KEY:
         logger.warning("ANTHROPIC_API_KEY not set, skipping LLM analysis")
-        return LLMResult(risks=[])
+        return LLMResult(risks=[], error="API key not configured")
 
     if not ocr_text or len(ocr_text) < 50:
-        logger.warning("OCR 텍스트가 너무 짧음 (%d자), LLM 분석 건너뜀", len(ocr_text))
-        return LLMResult(risks=[])
+        logger.warning("OCR 텍스트가 너무 짧음 (%d자), LLM 분석 건너뜀", len(ocr_text) if ocr_text else 0)
+        return LLMResult(risks=[], error=f"OCR text too short ({len(ocr_text) if ocr_text else 0} chars)")
 
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
@@ -246,10 +247,10 @@ def analyze_with_llm(ocr_text: str) -> LLMResult:
 
     except json.JSONDecodeError as e:
         logger.error("LLM 응답 JSON 파싱 실패: %s", str(e))
-        return LLMResult(risks=[])
+        return LLMResult(risks=[], error=f"JSON parse error: {str(e)}")
     except Exception as e:
         logger.error("LLM 분석 실패: %s", str(e))
-        return LLMResult(risks=[])
+        return LLMResult(risks=[], error=f"LLM error: {str(e)}")
 
 
 # ── 어댑터: ILLMAnalyzer 인터페이스 구현 ──

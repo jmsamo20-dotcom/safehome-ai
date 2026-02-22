@@ -52,8 +52,11 @@ async def run_analysis_pipeline(
 
     llm_result = await asyncio.to_thread(llm_analyzer.analyze, llm_input)
     llm_available = llm_result.extracted is not None or len(llm_result.risks) > 0
-    logger.info("[%s] Step 4: LLM 분석 - %d건, extracted=%s (%.1fs)",
-                job_id, len(llm_result.risks), "yes" if llm_result.extracted else "no", time.time() - t0)
+    if hasattr(llm_result, 'error') and llm_result.error:
+        logger.warning("[%s] Step 4: LLM 실패 - %s (%.1fs)", job_id, llm_result.error, time.time() - t0)
+    else:
+        logger.info("[%s] Step 4: LLM 분석 - %d건, extracted=%s (%.1fs)",
+                    job_id, len(llm_result.risks), "yes" if llm_result.extracted else "no", time.time() - t0)
 
     # Step 5: 교차 검증
     cross_checks = cross_validator.validate(
@@ -81,7 +84,8 @@ async def run_analysis_pipeline(
     except (ImportError, AttributeError):
         pass
 
-    # analysis_mode 설정
+    # 메타데이터 설정
+    result.ocr_chars = len(contract_text)
     if not llm_available:
         result.analysis_mode = "rule_only"
 
