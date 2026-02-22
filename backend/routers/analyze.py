@@ -78,14 +78,30 @@ async def analyze_contract(
         plugin = get_default()
         ocr_service = plugin.get_ocr_service()
 
-        contract_text = await asyncio.to_thread(ocr_service.extract_text, contract_path, job_dir)
-        registry_text = await asyncio.to_thread(ocr_service.extract_text, registry_path, job_dir) if registry_path else None
-        building_text = await asyncio.to_thread(ocr_service.extract_text, building_path, job_dir) if building_path else None
+        contract_text, contract_conf = await asyncio.to_thread(
+            ocr_service.extract_text_with_confidence, contract_path, job_dir
+        )
+
+        registry_text, registry_conf = (
+            await asyncio.to_thread(ocr_service.extract_text_with_confidence, registry_path, job_dir)
+            if registry_path else ("", -1.0)
+        )
+        registry_text = registry_text or None
+
+        building_text, building_conf = (
+            await asyncio.to_thread(ocr_service.extract_text_with_confidence, building_path, job_dir)
+            if building_path else ("", -1.0)
+        )
+        building_text = building_text or None
+
+        # 유효한 confidence만 모아 평균 산출
+        valid_confs = [c for c in [contract_conf, registry_conf, building_conf] if c >= 0]
+        ocr_confidence = round(sum(valid_confs) / len(valid_confs), 1) if valid_confs else None
 
         logger.info(
-            "[%s] Step 2: OCR 완료 - 계약서 %d자 / 등기부 %s자 / 건축물대장 %s자 (%.1fs)",
+            "[%s] Step 2: OCR 완료 - 계약서 %d자(%.0f%%) / 등기부 %s자 / 건축물대장 %s자 (%.1fs)",
             job_id,
-            len(contract_text),
+            len(contract_text), contract_conf,
             len(registry_text) if registry_text else "N/A",
             len(building_text) if building_text else "N/A",
             time.time() - t0,
@@ -107,6 +123,9 @@ async def analyze_contract(
             documents_analyzed=docs_analyzed,
             job_id=job_id,
         )
+
+        # OCR confidence를 결과에 포함
+        result.ocr_confidence = ocr_confidence
 
         logger.info(
             "[%s] 분석 완료 - 등급 %s, 점수 %d (%.1fs)",

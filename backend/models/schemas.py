@@ -70,6 +70,7 @@ class AnalysisResult(BaseModel):
     cross_checks: list[CrossCheckItem] | None = None  # 교차 검증 결과
     documents_analyzed: list[str] | None = None  # ["contract", "registry", ...]
     analysis_mode: str = "hybrid"  # "hybrid" (Rule+LLM) | "rule_only"
+    ocr_confidence: float | None = None  # OCR 신뢰도 (0~100), None이면 측정 불가
     disclaimer: str = (
         "본 분석은 AI 기반 참고 정보이며, 법률 자문이 아닙니다. "
         "정확한 판단을 위해 법률 전문가 상담을 권장합니다."

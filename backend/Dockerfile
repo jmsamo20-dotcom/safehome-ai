@@ -10,6 +10,8 @@ RUN apt-get update && \
       tesseract-ocr \
       tesseract-ocr-kor \
       poppler-utils \
+      libgl1-mesa-glx \
+      libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

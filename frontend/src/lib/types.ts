@@ -49,4 +49,5 @@ export interface AnalysisResult {
   cross_checks?: CrossCheckItem[];
   documents_analyzed?: string[];
   analysis_mode?: "hybrid" | "rule_only";
+  ocr_confidence?: number | null; // OCR 신뢰도 (0~100)
 }

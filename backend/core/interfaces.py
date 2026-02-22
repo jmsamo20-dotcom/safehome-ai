@@ -54,6 +54,10 @@ class IOCRService(ABC):
         """파일에서 텍스트 추출"""
         ...
 
+    def extract_text_with_confidence(self, file_path: Path, job_dir: Path) -> tuple[str, float]:
+        """파일에서 텍스트 + confidence(0~100) 추출. 기본: confidence=-1(미지원)"""
+        return self.extract_text(file_path, job_dir), -1.0
+
     @property
     @abstractmethod
     def supported_extensions(self) -> set[str]:

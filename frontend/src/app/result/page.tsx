@@ -549,6 +549,29 @@ export default function ResultPage() {
         )}
       </div>
 
+      {/* ── OCR 신뢰도 경고 ── */}
+      {result.ocr_confidence != null && result.ocr_confidence < 60 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3 flex items-start gap-2.5">
+          <span className="text-amber-500 text-lg shrink-0 mt-0.5">{"\u26A0\uFE0F"}</span>
+          <div>
+            <p className="text-sm font-semibold text-amber-800">
+              문서 인식률이 낮습니다 ({Math.round(result.ocr_confidence)}%)
+            </p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              {result.ocr_confidence < 30
+                ? "분석 정확도가 매우 낮을 수 있습니다. 더 선명한 사진으로 다시 시도해 주세요."
+                : "일부 내용이 정확하지 않을 수 있습니다. 밝은 곳에서 글자가 잘 보이도록 다시 촬영해 보세요."}
+            </p>
+            <button
+              onClick={() => router.push("/upload")}
+              className="no-print mt-2 text-xs font-semibold text-amber-700 underline hover:text-amber-900"
+            >
+              다시 촬영하기
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── [1] HERO: 등급 + 점수 + 요약 ── */}
       <div className={`${gradeStyle.bg} rounded-2xl p-6 text-center mb-4`}>
         <p className="text-sm text-gray-500 mb-1">위험도 등급</p>
