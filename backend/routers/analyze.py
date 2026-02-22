@@ -6,6 +6,22 @@ from pathlib import Path
 from fastapi import APIRouter, File, UploadFile, HTTPException, Form
 
 from config import ALLOWED_EXTENSIONS, MAX_UPLOAD_SIZE_BYTES
+
+# ── MIME 검증 (매직 바이트) ──
+MAGIC_SIGNATURES = [
+    (b'\xff\xd8\xff', {'.jpg', '.jpeg'}),   # JPEG
+    (b'\x89PNG\r\n\x1a\n', {'.png'}),       # PNG
+    (b'%PDF', {'.pdf'}),                      # PDF
+]
+MAX_IMAGE_DIMENSION = 10000  # 최대 이미지 크기 (px)
+
+
+def _validate_mime(content: bytes, ext: str) -> bool:
+    """파일 매직 바이트로 실제 파일 형식 확인 (확장자 위조 방지)"""
+    for magic, valid_exts in MAGIC_SIGNATURES:
+        if content[:len(magic)] == magic:
+            return ext in valid_exts
+    return False  # 알 수 없는 형식
 from models.schemas import AnalysisResult, RiskGrade
 from core.registry import get_default
 from core.pipeline import run_analysis_pipeline
@@ -28,6 +44,9 @@ async def _validate_and_save(
 
     content = await file.read()
     if len(content) > MAX_UPLOAD_SIZE_BYTES:
+        return None
+
+    if not _validate_mime(content, ext):
         return None
 
     path = job_dir / f"{prefix}{ext}"
@@ -55,6 +74,10 @@ async def analyze_contract(
     content = await contract_image.read()
     if len(content) > MAX_UPLOAD_SIZE_BYTES:
         raise HTTPException(413, "파일 크기가 10MB를 초과합니다.")
+
+    # MIME 타입 검증 (확장자 위조 방지)
+    if not _validate_mime(content, ext):
+        raise HTTPException(415, "파일 내용이 확장자와 일치하지 않습니다.")
 
     job_id, job_dir = create_job_dir()
 

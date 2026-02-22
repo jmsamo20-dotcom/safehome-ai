@@ -44,6 +44,95 @@ KEYWORD_RULES: dict[str, list[str]] = {
 }
 
 
+# ── 부정형 오탐 방지 (Gemini 피드백) ──
+# "압류가 없는 상태" 같은 부정 문맥에서 오탐 방지
+
+NEGATION_WORDS = ["없", "않", "아닌", "미해당", "해당없", "해당 없"]
+
+# 부정형 확인 대상: 등기부/세금 관련 (클린 문서에서 "~없음"과 자주 등장)
+NEGATION_CHECK_RISKS = {"C-1", "C-2", "C-3", "C-5", "D-5"}
+
+
+def _is_negated(text: str, match_end: int, window: int = 10) -> bool:
+    """매칭된 키워드 뒤 window 글자 내에 부정어가 있는지 확인
+
+    예: "압류가 없는" → True (부정 문맥, 안전)
+        "압류 결정"   → False (위험 신호)
+    """
+    after = text[match_end:match_end + window]
+    return any(neg in after for neg in NEGATION_WORDS)
+
+
+# ── 근접 키워드 탐지 규칙 (GPT 피드백) ──
+# 정확한 구문 매칭 외에, 키워드 쌍이 가까이 있으면 탐지
+# (kw1, kw2, max_distance): kw1 뒤 max_distance자 이내에 kw2 존재 시 탐지
+
+PROXIMITY_RULES: dict[str, list[tuple[str, str, int]]] = {
+    "B-2": [
+        ("우선변제권", "포기", 15),
+        ("대항력", "포기", 15),
+        ("대항력", "행사하지", 20),
+        ("이의", "제기하지", 15),
+    ],
+    "B-6": [
+        ("명도", "동의", 10),
+        ("퇴거", "동의", 10),
+        ("강제집행", "동의", 15),
+    ],
+    "D-3": [
+        ("소유주", "별도", 15),
+        ("위임", "포괄", 10),
+    ],
+}
+
+
+def detect_by_proximity(text: str) -> list[DetectedRisk]:
+    """근접 키워드 조합 탐지 — 정확한 구문 매칭에서 놓치는 변형 패턴 감지
+
+    예: "우선변제권의 행사를 포기" → "우선변제권"과 "포기"가 15자 이내
+    """
+    detected = []
+    found_ids: set[str] = set()
+
+    for risk_id, pairs in PROXIMITY_RULES.items():
+        if risk_id in found_ids:
+            continue
+        for kw1, kw2, max_dist in pairs:
+            matched = False
+            for m1 in re.finditer(re.escape(kw1), text):
+                search_end = min(len(text), m1.end() + max_dist)
+                search_area = text[m1.end():search_end]
+
+                m2 = re.search(re.escape(kw2), search_area)
+                if m2:
+                    # 부정형 체크
+                    if risk_id in NEGATION_CHECK_RISKS:
+                        if _is_negated(text, m1.end() + m2.end()):
+                            continue
+
+                    risk_def = next(r for r in RISK_DEFINITIONS if r["id"] == risk_id)
+                    snippet_start = max(0, m1.start() - 10)
+                    snippet_end = min(len(text), search_end + 10)
+                    snippet = text[snippet_start:snippet_end]
+
+                    detected.append(DetectedRisk(
+                        risk_id=risk_id,
+                        risk_name=risk_def["name"],
+                        category=risk_def["category"],
+                        severity=risk_def["severity"],
+                        matched_text=f"...{snippet}...",
+                        explanation=risk_def["description"],
+                        suggestion=risk_def["suggestion"],
+                    ))
+                    found_ids.add(risk_id)
+                    matched = True
+                    break
+            if matched:
+                break
+
+    return detected
+
+
 def detect_by_keywords(text: str) -> list[DetectedRisk]:
     """키워드 매칭 기반 위험 요소 탐지 (HIGH 등급)"""
     detected = []
@@ -53,9 +142,14 @@ def detect_by_keywords(text: str) -> list[DetectedRisk]:
         for keyword in keywords:
             matches = list(re.finditer(keyword, text_lower))
             if matches:
+                match = matches[0]
+                # 부정형 오탐 방지: 등기부/세금 키워드는 "~없음" 문맥 확인
+                if risk_id in NEGATION_CHECK_RISKS:
+                    if _is_negated(text_lower, match.end()):
+                        continue
+
                 risk_def = next(r for r in RISK_DEFINITIONS if r["id"] == risk_id)
                 # 매칭된 텍스트 주변 50자 추출
-                match = matches[0]
                 start = max(0, match.start() - 25)
                 end = min(len(text_lower), match.end() + 25)
                 snippet = text_lower[start:end]
@@ -325,6 +419,13 @@ class KRRuleEngine(IRuleEngine):
 
     def detect(self, text: str) -> list[DetectedRisk]:
         detected = detect_by_keywords(text)
+        # 근접 키워드 추가 탐지 (정확한 매칭에서 놓친 변형 패턴)
+        existing_ids = {r.risk_id for r in detected}
+        for r in detect_by_proximity(text):
+            if r.risk_id not in existing_ids:
+                detected.append(r)
+                existing_ids.add(r.risk_id)
+
         period_risk = detect_contract_period(text)
         if period_risk:
             detected.append(period_risk)

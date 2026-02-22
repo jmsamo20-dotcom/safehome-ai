@@ -110,8 +110,22 @@ def _deskew(img: np.ndarray) -> np.ndarray:
 
 # ── OCR 추출 + confidence 측정 ──
 
+def _ocr_single_pass(pil_img: Image.Image, psm: int) -> tuple[str, float]:
+    """단일 PSM 모드로 OCR 수행"""
+    config = f"--psm {psm}"
+    text = pytesseract.image_to_string(pil_img, lang="kor+eng", config=config)
+    confidence = _measure_confidence(pil_img, psm=psm)
+    return text.strip(), confidence
+
+
 def extract_text_from_image(image_path: Path) -> tuple[str, float]:
-    """이미지에서 텍스트 추출. (텍스트, confidence) 반환"""
+    """이미지에서 텍스트 추출. (텍스트, confidence) 반환
+
+    Multi-pass 전략:
+    - Pass 1: PSM 6 (uniform block) — 기본
+    - Pass 2: PSM 4 (variable column) — Pass 1 결과 불충분 시
+    더 좋은 결과를 자동 선택 (confidence 또는 텍스트 길이 기준)
+    """
     if not check_tesseract():
         logger.warning("Tesseract not found, returning empty text")
         return "", 0.0
@@ -127,15 +141,19 @@ def extract_text_from_image(image_path: Path) -> tuple[str, float]:
         # PIL로 다시 변환 (pytesseract 입력용)
         pil_processed = Image.fromarray(processed)
 
-        # Tesseract OCR (한국어 + 영어)
-        text = pytesseract.image_to_string(
-            pil_processed,
-            lang="kor+eng",
-            config="--psm 6",
-        )
+        # Pass 1: PSM 6 (uniform block of text)
+        text, confidence = _ocr_single_pass(pil_processed, psm=6)
 
-        # Confidence 측정
-        confidence = _measure_confidence(pil_processed)
+        # Pass 2: PSM 4 (variable-size column) — Pass 1 결과 불충분 시만 실행
+        if confidence < 60 or len(text) < 200:
+            text2, conf2 = _ocr_single_pass(pil_processed, psm=4)
+            # 더 좋은 결과 선택: confidence 우선, 동률이면 텍스트 길이
+            if conf2 > confidence or (conf2 == confidence and len(text2) > len(text) * 1.3):
+                logger.info(
+                    "Multi-pass: PSM 4가 더 좋은 결과 (%d자/%.1f%% vs %d자/%.1f%%)",
+                    len(text2), conf2, len(text), confidence,
+                )
+                text, confidence = text2, conf2
 
         logger.info("OCR 완료: %d자, confidence=%.1f%%", len(text), confidence)
         return text.strip(), confidence
@@ -145,13 +163,13 @@ def extract_text_from_image(image_path: Path) -> tuple[str, float]:
         return "", 0.0
 
 
-def _measure_confidence(pil_img: Image.Image) -> float:
+def _measure_confidence(pil_img: Image.Image, psm: int = 6) -> float:
     """Tesseract의 문자별 confidence를 측정하여 평균 반환"""
     try:
         data = pytesseract.image_to_data(
             pil_img,
             lang="kor+eng",
-            config="--psm 6",
+            config=f"--psm {psm}",
             output_type=pytesseract.Output.DICT,
         )
 

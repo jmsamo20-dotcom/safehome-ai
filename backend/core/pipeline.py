@@ -34,7 +34,8 @@ async def run_analysis_pipeline(
     cross_validator = plugin.get_cross_validator()
 
     # Step 3: Rule 기반 탐지 — 모든 텍스트에서 키워드 탐색
-    combined_text = contract_text
+    # 문서 타입 마커로 context loss 방지 (GPT 피드백)
+    combined_text = "[계약서]\n" + contract_text
     if registry_text:
         combined_text += "\n\n[등기부등본]\n" + registry_text
     if building_text:
