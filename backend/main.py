@@ -1,5 +1,14 @@
 import logging
+import sys
+import os
 from contextlib import asynccontextmanager
+
+# UTF-8 강제 설정 (Docker 환경 호환)
+os.environ.setdefault("PYTHONUTF8", "1")
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,7 +29,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="세이프홈 AI",
     description="전월세 계약 리스크 분석 서비스",
-    version="0.2.0",
+    version="0.3.0",
     lifespan=lifespan,
 )
 
