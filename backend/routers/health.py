@@ -15,7 +15,7 @@ async def health_check():
     return {
         "status": "ok",
         "service": "safehome-ai",
-        "version": "0.3.1",
+        "version": "0.4.0",
         "loaded_plugins": loaded_plugins(),
         "capabilities": {
             "llm": bool(ANTHROPIC_API_KEY),
