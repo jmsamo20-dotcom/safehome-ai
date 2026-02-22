@@ -66,11 +66,22 @@ async def run_analysis_pipeline(
     logger.info("[%s] Step 5: 교차 검증 - %d건 (%.1fs)", job_id, len(cross_checks), time.time() - t0)
 
     # Step 6: 최종 결과 생성
+    # LLM extracted가 없으면 Rule 기반 정규식 추출 사용
+    extracted = llm_result.extracted
+    doc_type = llm_result.document_type
+    if not extracted:
+        from plugins.kr.rule_engine import extract_contract_info
+        extracted = extract_contract_info(contract_text)
+        if not doc_type:
+            doc_type = "전월세계약서"
+        logger.info("[%s] Step 6: Rule 기반 정보 추출 - %s",
+                    job_id, list(extracted.keys()) if extracted else "없음")
+
     result = rule_engine.build_result(
         rule_detected,
         llm_result.risks,
-        extracted=llm_result.extracted,
-        document_type=llm_result.document_type,
+        extracted=extracted,
+        document_type=doc_type,
         cross_checks=cross_checks,
         documents_analyzed=documents_analyzed,
     )
@@ -84,12 +95,9 @@ async def run_analysis_pipeline(
     except (ImportError, AttributeError):
         pass
 
-    # 메타데이터 설정
-    result.ocr_chars = len(contract_text)
+    # analysis_mode 설정
     if not llm_available:
         result.analysis_mode = "rule_only"
-        if hasattr(llm_result, 'error') and llm_result.error:
-            result.llm_error = llm_result.error
 
     logger.info(
         "[%s] Step 6: 최종 결과 - 등급 %s, 점수 %d, 위험 %d건, 교차검증 %d건, mode=%s (%.1fs)",

@@ -251,12 +251,10 @@ def analyze_with_llm(ocr_text: str) -> LLMResult:
 
     except json.JSONDecodeError as e:
         logger.error("LLM 응답 JSON 파싱 실패: %s", str(e))
-        return LLMResult(risks=[], error=f"JSON parse error: {str(e)}")
+        return LLMResult(risks=[], error="json_parse_error")
     except Exception as e:
-        import traceback
-        tb = traceback.format_exc()
-        logger.error("LLM 분석 실패: %s\n%s", str(e), tb)
-        return LLMResult(risks=[], error=f"LLM error: {str(e)} | traceback: {tb[-500:]}")
+        logger.error("LLM 분석 실패: %s", repr(e))
+        return LLMResult(risks=[], error="llm_unavailable")
 
 
 # ── 어댑터: ILLMAnalyzer 인터페이스 구현 ──

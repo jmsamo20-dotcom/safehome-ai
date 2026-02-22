@@ -248,6 +248,66 @@ def build_analysis_result(
     )
 
 
+# ── 정규식 기반 계약 정보 추출 ──
+
+def extract_contract_info(text: str) -> dict:
+    """OCR 텍스트에서 기본 계약 정보를 정규식으로 추출 (LLM 불필요)"""
+    info: dict = {}
+
+    # 임대인 성명
+    m = re.search(r"임대인[:\s]*(?:성명[:\s]*)?([\uac00-\ud7a3]{2,4})", text)
+    if m:
+        info.setdefault("landlord", {})["name"] = m.group(1)
+
+    # 임차인 성명
+    m = re.search(r"임차인[:\s]*(?:성명[:\s]*)?([\uac00-\ud7a3]{2,4})", text)
+    if m:
+        info.setdefault("tenant", {})["name"] = m.group(1)
+
+    # 보증금
+    patterns_deposit = [
+        r"보증금[:\s]*금?\s*([\d,]+)\s*원",
+        r"보증금[:\s]*금?\s*([\uac00-\ud7a3]+원)",
+        r"보증금[:\s]*[^\d]*([\d,]{4,})",
+    ]
+    for p in patterns_deposit:
+        m = re.search(p, text)
+        if m:
+            info.setdefault("money", {})["deposit"] = m.group(1).strip()
+            break
+
+    # 월세/차임
+    patterns_rent = [
+        r"(?:월세|차임|월\s*임대료)[:\s]*금?\s*([\d,]+)\s*원",
+        r"(?:월세|차임|월\s*임대료)[:\s]*없음",
+    ]
+    for p in patterns_rent:
+        m = re.search(p, text)
+        if m:
+            val = m.group(0)
+            if "없음" in val:
+                info.setdefault("money", {})["rent"] = "없음 (전세)"
+            else:
+                info.setdefault("money", {})["rent"] = m.group(1).strip() + "원"
+            break
+
+    # 소재지/주소
+    m = re.search(r"소재지[:\s]*([\uac00-\ud7a3\s\d\-]+(?:동|로|길|호)[\s\d\-]*)", text)
+    if m:
+        info.setdefault("property", {})["address"] = m.group(1).strip()
+
+    # 계약 기간 (시작일 ~ 종료일)
+    date_pat = r"(\d{4})\s*[년./-]\s*(\d{1,2})\s*[월./-]\s*(\d{1,2})\s*일?"
+    date_range = re.search(date_pat + r"\s*[~부\-–—]\s*" + date_pat, text)
+    if date_range:
+        start = f"{date_range.group(1)}년 {date_range.group(2)}월 {date_range.group(3)}일"
+        end = f"{date_range.group(4)}년 {date_range.group(5)}월 {date_range.group(6)}일"
+        info.setdefault("term", {})["start_date"] = start
+        info["term"]["end_date"] = end
+
+    return info if info else None
+
+
 # ── 어댑터: IRuleEngine 인터페이스 구현 ──
 
 class KRRuleEngine(IRuleEngine):

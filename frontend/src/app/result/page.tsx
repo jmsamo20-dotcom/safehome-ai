@@ -549,22 +549,6 @@ export default function ResultPage() {
         )}
       </div>
 
-      {/* ── rule_only 모드 안내 ── */}
-      {result.analysis_mode === "rule_only" && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
-          <div className="flex items-start gap-2">
-            <span className="text-amber-600 text-sm mt-0.5">{"\u26A0"}</span>
-            <div>
-              <p className="text-amber-800 text-sm font-semibold">Rule 기반 분석만 수행됨</p>
-              <p className="text-amber-700 text-xs mt-0.5">
-                AI 심층 분석이 불가하여 키워드 기반 탐지만 적용되었습니다.
-                임대인/보증금 등 세부 정보 추출과 문맥 기반 위험 탐지가 제한됩니다.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ── [1] HERO: 등급 + 점수 + 요약 ── */}
       <div className={`${gradeStyle.bg} rounded-2xl p-6 text-center mb-4`}>
         <p className="text-sm text-gray-500 mb-1">위험도 등급</p>
