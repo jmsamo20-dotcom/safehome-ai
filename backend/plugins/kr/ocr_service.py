@@ -157,10 +157,13 @@ def _measure_confidence(pil_img: Image.Image) -> float:
 
         confidences = []
         for i, conf in enumerate(data["conf"]):
-            conf_val = int(conf)
-            text = data["text"][i].strip()
-            # confidence가 0 이상이고 실제 텍스트가 있는 것만
-            if conf_val > 0 and text:
+            try:
+                conf_val = float(conf)
+            except (ValueError, TypeError):
+                continue
+            text_val = str(data["text"][i]).strip()
+            # confidence가 0 초과이고 실제 텍스트가 있는 것만
+            if conf_val > 0 and text_val:
                 confidences.append(conf_val)
 
         if not confidences:
