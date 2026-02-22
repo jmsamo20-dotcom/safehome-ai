@@ -120,13 +120,23 @@ def detect_contract_period(text: str) -> DetectedRisk | None:
             diff_days = (end - start).days
             if 0 < diff_days < 730:  # 2년 = 730일
                 months = round(diff_days / 30.44)
+                # 경계값 처리: 23개월 이상이면 소프트 경고 (severity 낮춤)
+                near_boundary = diff_days >= 720  # 2년에서 10일 이내
+                severity = 3 if near_boundary else risk_def["severity"]
+                if near_boundary:
+                    explanation = (
+                        f"계약 기간이 약 {months}개월로, 2년(주택임대차보호법 보호 기간)에 "
+                        f"근접하지만 미달합니다. 계약서의 시작일/종료일을 다시 확인해 주세요."
+                    )
+                else:
+                    explanation = f"{risk_def['description']} (감지된 기간: 약 {months}개월)"
                 return DetectedRisk(
                     risk_id="A-3",
                     risk_name=risk_def["name"],
                     category=risk_def["category"],
-                    severity=risk_def["severity"],
+                    severity=severity,
                     matched_text=date_range.group(0),
-                    explanation=f"{risk_def['description']} (감지된 기간: 약 {months}개월)",
+                    explanation=explanation,
                     suggestion=risk_def["suggestion"],
                 )
         except (ValueError, OverflowError):

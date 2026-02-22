@@ -50,4 +50,5 @@ export interface AnalysisResult {
   documents_analyzed?: string[];
   analysis_mode?: "hybrid" | "rule_only";
   ocr_confidence?: number | null; // OCR 신뢰도 (0~100)
+  ocr_grade_limited?: boolean; // OCR 품질로 인해 등급 제한됨
 }

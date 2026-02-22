@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import APIRouter, File, UploadFile, HTTPException, Form
 
 from config import ALLOWED_EXTENSIONS, MAX_UPLOAD_SIZE_BYTES
-from models.schemas import AnalysisResult
+from models.schemas import AnalysisResult, RiskGrade
 from core.registry import get_default
 from core.pipeline import run_analysis_pipeline
 from utils.file_manager import create_job_dir
@@ -124,12 +124,58 @@ async def analyze_contract(
             job_id=job_id,
         )
 
-        # OCR confidence를 결과에 포함
+        # ── OCR Quality Guard ──
+        # "OCR 실패 → 위험 0건 → A등급" 흐름을 차단
         result.ocr_confidence = ocr_confidence
+        contract_chars = len(contract_text)
+        grade_limited = False
+
+        # Guard 1: confidence 기반 등급 상한
+        if ocr_confidence is not None:
+            if ocr_confidence < 50:
+                # 매우 낮음: 최고 C등급
+                if result.grade in (RiskGrade.A, RiskGrade.B):
+                    result.grade = RiskGrade.C
+                result.score = min(result.score, 65)
+                grade_limited = True
+            elif ocr_confidence < 65:
+                # 낮음: 최고 B등급
+                if result.grade == RiskGrade.A:
+                    result.grade = RiskGrade.B
+                result.score = min(result.score, 85)
+                grade_limited = True
+
+        # Guard 2: 텍스트 길이 기반 (confidence 측정 실패 시 fallback)
+        if contract_chars < 200:
+            # 매우 짧음: OCR 거의 실패
+            if result.grade in (RiskGrade.A, RiskGrade.B):
+                result.grade = RiskGrade.C
+            result.score = min(result.score, 60)
+            grade_limited = True
+        elif contract_chars < 500:
+            # 짧음: 부분 인식
+            if result.grade == RiskGrade.A:
+                result.grade = RiskGrade.B
+            result.score = min(result.score, 80)
+            grade_limited = True
+
+        if grade_limited:
+            result.ocr_grade_limited = True
+            result.summary = (
+                "[문서 인식 제한] 사진 품질이 낮아 등급이 제한되었습니다. "
+                "선명한 사진으로 다시 분석하면 더 정확한 결과를 받을 수 있습니다. "
+                + result.summary
+            )
+            logger.info(
+                "[%s] OCR Quality Guard 적용: 등급 %s, 점수 %d (conf=%.1f, chars=%d)",
+                job_id, result.grade, result.score,
+                ocr_confidence if ocr_confidence is not None else -1,
+                contract_chars,
+            )
 
         logger.info(
-            "[%s] 분석 완료 - 등급 %s, 점수 %d (%.1fs)",
-            job_id, result.grade, result.score, time.time() - t0,
+            "[%s] 분석 완료 - 등급 %s, 점수 %d, limited=%s (%.1fs)",
+            job_id, result.grade, result.score, grade_limited, time.time() - t0,
         )
 
         return result

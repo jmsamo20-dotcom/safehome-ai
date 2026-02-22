@@ -549,8 +549,34 @@ export default function ResultPage() {
         )}
       </div>
 
-      {/* ── OCR 신뢰도 경고 ── */}
-      {result.ocr_confidence != null && result.ocr_confidence < 60 && (
+      {/* ── OCR 품질 경고 (등급 제한 시 강조) ── */}
+      {result.ocr_grade_limited && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-3 flex items-start gap-2.5">
+          <span className="text-red-500 text-lg shrink-0 mt-0.5">{"\uD83D\uDED1"}</span>
+          <div>
+            <p className="text-sm font-semibold text-red-800">
+              문서 인식 품질 부족 — 등급이 제한되었습니다
+            </p>
+            <p className="text-xs text-red-700 mt-0.5">
+              사진이 흐리거나 텍스트가 충분히 인식되지 않아,
+              실제보다 안전하게 표시될 수 있습니다.
+              선명한 사진으로 다시 분석해 주세요.
+            </p>
+            {result.ocr_confidence != null && (
+              <p className="text-xs text-red-500 mt-1">
+                인식률: {Math.round(result.ocr_confidence)}%
+              </p>
+            )}
+            <button
+              onClick={() => router.push("/upload")}
+              className="no-print mt-2 px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 transition"
+            >
+              다시 촬영하기
+            </button>
+          </div>
+        </div>
+      )}
+      {!result.ocr_grade_limited && result.ocr_confidence != null && result.ocr_confidence < 60 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3 flex items-start gap-2.5">
           <span className="text-amber-500 text-lg shrink-0 mt-0.5">{"\u26A0\uFE0F"}</span>
           <div>
@@ -558,9 +584,8 @@ export default function ResultPage() {
               문서 인식률이 낮습니다 ({Math.round(result.ocr_confidence)}%)
             </p>
             <p className="text-xs text-amber-700 mt-0.5">
-              {result.ocr_confidence < 30
-                ? "분석 정확도가 매우 낮을 수 있습니다. 더 선명한 사진으로 다시 시도해 주세요."
-                : "일부 내용이 정확하지 않을 수 있습니다. 밝은 곳에서 글자가 잘 보이도록 다시 촬영해 보세요."}
+              일부 내용이 정확하지 않을 수 있습니다.
+              밝은 곳에서 글자가 잘 보이도록 다시 촬영해 보세요.
             </p>
             <button
               onClick={() => router.push("/upload")}
