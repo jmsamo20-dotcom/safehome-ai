@@ -186,6 +186,10 @@ def analyze_with_llm(ocr_text: str) -> LLMResult:
 
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
+    # 인코딩 안전 처리: surrogate 문자 제거
+    safe_text = ocr_text[:8000].encode('utf-8', errors='replace').decode('utf-8')
+    user_content = f"아래 계약서/등기부등본 텍스트를 분석해 주세요:\n\n{safe_text}"
+
     try:
         message = client.messages.create(
             model=ANTHROPIC_MODEL,
@@ -194,7 +198,7 @@ def analyze_with_llm(ocr_text: str) -> LLMResult:
             messages=[
                 {
                     "role": "user",
-                    "content": f"아래 계약서/등기부등본 텍스트를 분석해 주세요:\n\n{ocr_text[:8000]}",
+                    "content": user_content,
                 }
             ],
         )

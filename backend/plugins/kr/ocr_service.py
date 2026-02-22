@@ -58,7 +58,7 @@ def extract_text_from_pdf(pdf_path: Path, job_dir: Path) -> str:
     try:
         result = subprocess.run(
             ["pdftotext", str(pdf_path), "-"],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True, text=True, timeout=30, encoding='utf-8',
         )
         if result.stdout.strip():
             logger.info("PDF 텍스트 직접 추출: %d자", len(result.stdout))
