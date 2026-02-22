@@ -75,20 +75,27 @@ def detect_by_keywords(text: str) -> list[DetectedRisk]:
 
 
 def detect_contract_period(text: str) -> DetectedRisk | None:
-    """계약 기간 2년 미만 탐지 (A-3)"""
-    # 패턴: "임대차 기간: 12개월" 또는 "계약기간 1년"
-    patterns = [
+    """계약 기간 2년 미만 탐지 (A-3)
+
+    탐지 방법:
+    1. "임대차 기간: 12개월" / "계약기간 1년" (명시적 기간)
+    2. 시작일~종료일 날짜 차이 계산 (실제 계약서 형태)
+    """
+    from datetime import datetime
+
+    risk_def = next(r for r in RISK_DEFINITIONS if r["id"] == "A-3")
+
+    # 방법 1: "N개월" / "N년" 명시적 기간
+    explicit_patterns = [
         r"(?:임대차\s*기간|계약\s*기간)[^\d]*(\d+)\s*개월",
         r"(?:임대차\s*기간|계약\s*기간)[^\d]*(\d+)\s*년",
     ]
-
-    for i, pattern in enumerate(patterns):
+    for i, pattern in enumerate(explicit_patterns):
         match = re.search(pattern, text)
         if match:
             value = int(match.group(1))
             months = value if i == 0 else value * 12
             if months < 24:
-                risk_def = next(r for r in RISK_DEFINITIONS if r["id"] == "A-3")
                 return DetectedRisk(
                     risk_id="A-3",
                     risk_name=risk_def["name"],
@@ -98,6 +105,33 @@ def detect_contract_period(text: str) -> DetectedRisk | None:
                     explanation=risk_def["description"],
                     suggestion=risk_def["suggestion"],
                 )
+
+    # 방법 2: 시작일~종료일 날짜 파싱
+    # "2026년 3월 1일 ~ 2027년 2월 28일", "2026.03.01 ~ 2027.02.28" 등
+    date_pattern = r"(\d{4})\s*[년./-]\s*(\d{1,2})\s*[월./-]\s*(\d{1,2})\s*일?"
+    date_range = re.search(
+        date_pattern + r"\s*[~부\-–—]\s*" + date_pattern,
+        text,
+    )
+    if date_range:
+        try:
+            start = datetime(int(date_range.group(1)), int(date_range.group(2)), int(date_range.group(3)))
+            end = datetime(int(date_range.group(4)), int(date_range.group(5)), int(date_range.group(6)))
+            diff_days = (end - start).days
+            if 0 < diff_days < 730:  # 2년 = 730일
+                months = round(diff_days / 30.44)
+                return DetectedRisk(
+                    risk_id="A-3",
+                    risk_name=risk_def["name"],
+                    category=risk_def["category"],
+                    severity=risk_def["severity"],
+                    matched_text=date_range.group(0),
+                    explanation=f"{risk_def['description']} (감지된 기간: 약 {months}개월)",
+                    suggestion=risk_def["suggestion"],
+                )
+        except (ValueError, OverflowError):
+            pass
+
     return None
 
 

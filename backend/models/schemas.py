@@ -69,6 +69,7 @@ class AnalysisResult(BaseModel):
     document_type: str | None = None  # 문서 유형 추정
     cross_checks: list[CrossCheckItem] | None = None  # 교차 검증 결과
     documents_analyzed: list[str] | None = None  # ["contract", "registry", ...]
+    analysis_mode: str = "hybrid"  # "hybrid" (Rule+LLM) | "rule_only" (LLM 실패 시)
     disclaimer: str = (
         "본 분석은 AI 기반 참고 정보이며, 법률 자문이 아닙니다. "
         "정확한 판단을 위해 법률 전문가 상담을 권장합니다."

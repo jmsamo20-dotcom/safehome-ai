@@ -51,7 +51,9 @@ async def run_analysis_pipeline(
         llm_input += f"\n\n[건축물대장]\n{building_text}"
 
     llm_result = await asyncio.to_thread(llm_analyzer.analyze, llm_input)
-    logger.info("[%s] Step 4: LLM 분석 - %d건 (%.1fs)", job_id, len(llm_result.risks), time.time() - t0)
+    llm_available = llm_result.extracted is not None or len(llm_result.risks) > 0
+    logger.info("[%s] Step 4: LLM 분석 - %d건, extracted=%s (%.1fs)",
+                job_id, len(llm_result.risks), "yes" if llm_result.extracted else "no", time.time() - t0)
 
     # Step 5: 교차 검증
     cross_checks = cross_validator.validate(
@@ -79,11 +81,15 @@ async def run_analysis_pipeline(
     except (ImportError, AttributeError):
         pass
 
+    # analysis_mode 설정
+    if not llm_available:
+        result.analysis_mode = "rule_only"
+
     logger.info(
-        "[%s] Step 6: 최종 결과 - 등급 %s, 점수 %d, 위험 %d건, 교차검증 %d건 (%.1fs)",
+        "[%s] Step 6: 최종 결과 - 등급 %s, 점수 %d, 위험 %d건, 교차검증 %d건, mode=%s (%.1fs)",
         job_id, result.grade, result.score,
         len(result.detected_risks), len(cross_checks),
-        time.time() - t0,
+        result.analysis_mode, time.time() - t0,
     )
 
     return result

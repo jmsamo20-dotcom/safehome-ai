@@ -48,4 +48,5 @@ export interface AnalysisResult {
   simulation?: DepositSimulation;
   cross_checks?: CrossCheckItem[];
   documents_analyzed?: string[];
+  analysis_mode?: "hybrid" | "rule_only";
 }
