@@ -88,6 +88,8 @@ async def run_analysis_pipeline(
     result.ocr_chars = len(contract_text)
     if not llm_available:
         result.analysis_mode = "rule_only"
+        if hasattr(llm_result, 'error') and llm_result.error:
+            result.llm_error = llm_result.error
 
     logger.info(
         "[%s] Step 6: 최종 결과 - 등급 %s, 점수 %d, 위험 %d건, 교차검증 %d건, mode=%s (%.1fs)",
